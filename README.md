@@ -152,18 +152,52 @@ This is the most important property of these tools, so it is stated plainly:
 
 **Run it inside an OS-level sandbox** — a container, a VM, a dedicated
 low-privilege user, seccomp/AppArmor, or equivalent — scoped to the project you
-intend the agent to work in.
+intend the agent to work in. See [SECURITY.md](./SECURITY.md) for the full trust
+model.
+
+## Documentation
+
+Full guides and reference live at
+**[agent-tools.clarvis.dev](https://agent-tools.clarvis.dev)** (source in
+[`docs/`](docs/)):
+
+- **Guide** — [getting started](https://agent-tools.clarvis.dev/getting-started),
+  [embed in an agent](https://agent-tools.clarvis.dev/guide/embed-in-an-agent),
+  [the core API](https://agent-tools.clarvis.dev/guide/the-core-api),
+  [read-only mode](https://agent-tools.clarvis.dev/guide/read-only-mode),
+  [limits & spill](https://agent-tools.clarvis.dev/guide/limits-and-spill).
+- **Reference** — [tools](https://agent-tools.clarvis.dev/reference/tools),
+  [configuration](https://agent-tools.clarvis.dev/reference/configuration),
+  [createAgentTools](https://agent-tools.clarvis.dev/reference/create-agent-tools),
+  [core API](https://agent-tools.clarvis.dev/reference/core-api),
+  [error codes](https://agent-tools.clarvis.dev/reference/error-codes).
+- **Concepts & operations** —
+  [how it works](https://agent-tools.clarvis.dev/explanation/how-it-works),
+  [path confinement](https://agent-tools.clarvis.dev/explanation/confinement),
+  [text & encoding](https://agent-tools.clarvis.dev/explanation/text-and-encoding),
+  [deploy securely](https://agent-tools.clarvis.dev/operations/deploy-securely).
+
+The canonical per-tool contract (inputs, behavior, error codes) is
+[SPEC.md](./SPEC.md).
 
 ## Development
 
 ```sh
 npm run build         # tsc -> dist/ (emits .d.ts)
-npm test              # vitest
+npm test              # vitest (contract + integration)
 npm run typecheck
 npm run lint
 npm run format:check
+npm run pre-commit    # typecheck + format:check + test
 ```
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup and
+the quality gate, [`docs-internal/`](docs-internal/) for the architecture and
+per-subsystem internals, and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md). Report
+security issues privately per [SECURITY.md](./SECURITY.md).
 
 ## License
 
-See [LICENSE](./LICENSE).
+[MIT](./LICENSE) © Clarvis

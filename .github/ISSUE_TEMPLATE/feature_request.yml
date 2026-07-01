@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest an improvement to @clarvis/agent-tools
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What are you trying to do, and what is missing or hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or behavior
+      description: |
+        Describe the change concretely — e.g. a new tool, a config option, an error code, or a change
+        to an existing tool's behavior.
+    validations:
+      required: true
+  - type: dropdown
+    id: contract-impact
+    attributes:
+      label: Does this change a tool's input/output/error contract?
+      options:
+        - 'No'
+        - 'Yes (a tool schema, result shape, or error code changes)'
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you be willing to contribute a PR?
+      options:
+        - 'Yes'
+        - 'Maybe, with guidance'
+        - 'No'
