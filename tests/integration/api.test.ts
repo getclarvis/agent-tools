@@ -76,4 +76,21 @@ describe("createAgentTools (library API)", () => {
     const r = await t.callTool("list_dir");
     expect(r.isError).toBe(false);
   });
+
+  it("does not mutate the caller's args object with schema defaults", async () => {
+    const t = createAgentTools({ workspaceRoot: root, probeRipgrep: () => false });
+    write(root, "a.txt", "alpha\n");
+    const args = { pattern: "alpha" };
+    const r = await t.callTool("grep", args);
+    expect(r.isError).toBe(false);
+    expect(Object.keys(args)).toEqual(["pattern"]);
+  });
+
+  it("accepts a frozen args object (defaults injected into a copy)", async () => {
+    const t = createAgentTools({ workspaceRoot: root, probeRipgrep: () => false });
+    write(root, "a.txt", "alpha\n");
+    const r = await t.callTool("grep", Object.freeze({ pattern: "alpha" }));
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("a.txt");
+  });
 });

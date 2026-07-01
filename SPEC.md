@@ -62,8 +62,10 @@ default 1; a negative value counts from the end — `-N` reads the last N lines;
 invalid); `limit` (integer, max lines, default tool-defined).
 
 **Behavior:** Returns lines prefixed with right-aligned line numbers and a tab.
-Empty file returns `(empty file)`. Over-long lines are truncated with a marker.
-When more lines remain, a continuation hint with the next `offset` is appended.
+Empty file returns `(empty file)`. Over-long lines are truncated with a marker, and no
+single emitted line exceeds `MAX_OUTPUT_BYTES` (a longer line is byte-truncated on a UTF-8
+boundary). At least one line is always shown. When more lines remain, a continuation hint
+with the next `offset` is appended.
 
 **Errors:** `not_found`, `not_a_file` (directory), `is_binary`, `too_large`,
 `path_escape`, `invalid_input` (offset 0, or a positive offset past EOF).
@@ -145,9 +147,9 @@ Create or overwrite a file with the given content (atomic).
 
 **Input:** `path` (string, required); `content` (string, required).
 
-**Behavior:** Writes `content` exactly. Parent directories must exist.
+**Behavior:** Writes `content` exactly. Missing parent directories are created.
 
-**Errors:** `not_found` (missing parent), `not_a_file`, `path_escape`, `io_error`.
+**Errors:** `not_a_file`, `path_escape`, `io_error`.
 
 ## edit_file
 
@@ -166,6 +168,12 @@ trimmed, an all-whitespace-collapsed, and finally a trimmed-substring match. It 
 guess); `new_string` is substituted verbatim (no re-indentation), and the result message
 discloses that a tolerant match was used. Line endings/BOM are preserved per the
 conventions above.
+
+Note the verbatim substitution replaces the **whole matched region, including its original
+leading indentation**, with `new_string` exactly as given. So a tolerant match can change a
+line's indentation if `new_string` does not itself carry it — the disclosed result message
+flags this and re-reading the file is recommended. (This is a deliberate trade-off: the tool
+never guesses re-indentation.)
 
 **Errors:** `no_match`, `ambiguous_match` (multiple exact or multiple tolerant
 matches without `replace_all`), `invalid_input` (identical strings), `not_found`,

@@ -6,6 +6,16 @@ import type { ToolDef } from "./types.js";
 
 const MAX_LINE = 2000;
 const DEFAULT_LIMIT = 2000;
+const LINE_TRUNC = " [... line truncated ...]";
+
+function capBytes(content: string, maxBytes: number): string {
+  if (Buffer.byteLength(content, "utf8") <= maxBytes) return content;
+  const room = Math.max(0, maxBytes - Buffer.byteLength(LINE_TRUNC, "utf8"));
+  const buf = Buffer.from(content, "utf8");
+  let end = Math.min(room, buf.length);
+  while (end > 0 && ((buf[end] ?? 0) & 0xc0) === 0x80) end--;
+  return buf.subarray(0, end).toString("utf8") + LINE_TRUNC;
+}
 
 export const readFile: ToolDef = {
   name: "read_file",
@@ -84,9 +94,11 @@ export const readFile: ToolDef = {
         let cut = MAX_LINE;
         const code = content.charCodeAt(cut - 1);
         if (code >= 0xd800 && code <= 0xdbff) cut -= 1;
-        content = content.slice(0, cut) + " [... line truncated ...]";
+        content = content.slice(0, cut) + LINE_TRUNC;
       }
-      const row = `${String(i + 1).padStart(6)}\t${content}`;
+      const prefix = `${String(i + 1).padStart(6)}\t`;
+      content = capBytes(content, config.maxOutputBytes - Buffer.byteLength(prefix, "utf8") - 1);
+      const row = prefix + content;
       const rowBytes = Buffer.byteLength(row, "utf8") + 1;
       if (i > start && used + rowBytes > config.maxOutputBytes) break;
       out.push(row);

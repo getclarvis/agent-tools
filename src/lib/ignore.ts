@@ -3,6 +3,7 @@ import type { Ignore } from "ignore";
 import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { warn } from "./log.js";
 
 const makeIgnore = createRequire(import.meta.url)("ignore") as (options?: object) => Ignore;
 
@@ -60,7 +61,7 @@ export function loadIgnore(workspaceRoot: string): Matcher {
     const gitignorePath = path.join(dir, ".gitignore");
     const content = readFileSafe(gitignorePath);
     if (content === undefined && existsSync(gitignorePath)) {
-      process.stderr.write(`clarvis-agent-tools: warning: cannot read ${gitignorePath}\n`);
+      warn(`clarvis-agent-tools: warning: cannot read ${gitignorePath}\n`);
     }
     const m = content !== undefined ? makeIgnore().add(content) : null;
     perDir.set(dir, m);

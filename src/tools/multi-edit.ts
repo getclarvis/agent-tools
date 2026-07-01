@@ -91,7 +91,8 @@ export const multiEdit: ToolDef = {
       (rel) => {
         const base = `Applied ${edits.length} ${edits.length === 1 ? "edit" : "edits"} to ${rel}.`;
         return fuzzyCount > 0
-          ? `${base} (${fuzzyCount} matched after whitespace-tolerant search; verify the result.)`
+          ? `${base} (${fuzzyCount} matched after a whitespace-tolerant search; each such region ` +
+              "— including its leading indentation — was replaced verbatim, so re-read to verify.)"
           : base;
       },
     );

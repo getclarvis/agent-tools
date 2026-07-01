@@ -49,16 +49,16 @@ function parseWorkspaceArg(argv: string[]): string | undefined {
   return undefined;
 }
 
-const READ_ONLY_TRUE = new Set(["1", "true", "yes", "on"]);
-const READ_ONLY_FALSE = new Set(["0", "false", "no", "off", ""]);
+const BOOL_TRUE = new Set(["1", "true", "yes", "on"]);
+const BOOL_FALSE = new Set(["0", "false", "no", "off", ""]);
 
 function resolveReadOnly(argv: string[], env: NodeJS.ProcessEnv): boolean {
   if (argv.includes("--read-only")) return true;
   const raw = env.READ_ONLY;
   if (raw === undefined) return false;
   const norm = raw.trim().toLowerCase();
-  if (READ_ONLY_TRUE.has(norm)) return true;
-  if (READ_ONLY_FALSE.has(norm)) return false;
+  if (BOOL_TRUE.has(norm)) return true;
+  if (BOOL_FALSE.has(norm)) return false;
   throw new StartupError(`READ_ONLY must be one of 1/true/yes/on or 0/false/no/off, got: ${raw}`);
 }
 
@@ -67,8 +67,8 @@ function resolveConfine(argv: string[], env: NodeJS.ProcessEnv): boolean {
   const raw = env.ALLOW_OUTSIDE_WORKSPACE;
   if (raw === undefined) return true;
   const norm = raw.trim().toLowerCase();
-  if (READ_ONLY_TRUE.has(norm)) return false;
-  if (READ_ONLY_FALSE.has(norm)) return true;
+  if (BOOL_TRUE.has(norm)) return false;
+  if (BOOL_FALSE.has(norm)) return true;
   throw new StartupError(
     `ALLOW_OUTSIDE_WORKSPACE must be one of 1/true/yes/on or 0/false/no/off, got: ${raw}`,
   );
@@ -121,6 +121,12 @@ function requireMin(n: number, min: number, name: string): number {
   return n;
 }
 
+function assertTimeoutOrder(min: number, max: number, minLabel: string, maxLabel: string): void {
+  if (max < min) {
+    throw new StartupError(`${maxLabel} (${max}) must be >= ${minLabel} (${min}).`);
+  }
+}
+
 export interface AgentToolsOptions {
   workspaceRoot: string;
 
@@ -155,11 +161,7 @@ export function resolveConfig(options: AgentToolsOptions): ServerConfig {
     1,
     "bashTimeoutMaxMs",
   );
-  if (bashTimeoutMaxMs < bashTimeoutMs) {
-    throw new StartupError(
-      `bashTimeoutMaxMs (${bashTimeoutMaxMs}) must be >= bashTimeoutMs (${bashTimeoutMs}).`,
-    );
-  }
+  assertTimeoutOrder(bashTimeoutMs, bashTimeoutMaxMs, "bashTimeoutMs", "bashTimeoutMaxMs");
 
   return {
     workspaceRoot,
@@ -201,11 +203,7 @@ export function buildConfig(
     DEFAULT_BASH_TIMEOUT_MAX_MS,
     "BASH_TIMEOUT_MAX_MS",
   );
-  if (bashTimeoutMaxMs < bashTimeoutMs) {
-    throw new StartupError(
-      `BASH_TIMEOUT_MAX_MS (${bashTimeoutMaxMs}) must be >= BASH_TIMEOUT_MS (${bashTimeoutMs}).`,
-    );
-  }
+  assertTimeoutOrder(bashTimeoutMs, bashTimeoutMaxMs, "BASH_TIMEOUT_MS", "BASH_TIMEOUT_MAX_MS");
 
   return resolveConfig({
     workspaceRoot: rawRoot,

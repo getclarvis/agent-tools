@@ -41,3 +41,6 @@ export { ToolError, serializeError, fsError } from "./errors.js";
 export type { ErrorCode } from "./errors.js";
 
 export { sweepSpillDir } from "./lib/output.js";
+
+export { setWarnSink } from "./lib/log.js";
+export type { WarnSink } from "./lib/log.js";
