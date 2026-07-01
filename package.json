@@ -28,6 +28,9 @@
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "pre-commit": "npm run typecheck && npm run format:check && npm test",
     "prepublishOnly": "test -f README.md && test -f SPEC.md && npm run build && npm test"
   },
@@ -45,6 +48,7 @@
     "eslint": "^8.57.0",
     "prettier": "^3.3.3",
     "typescript": "^5.7.2",
+    "vitepress": "^1.6.4",
     "vitest": "^2.1.8"
   },
   "repository": {

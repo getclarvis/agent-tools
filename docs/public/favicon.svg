@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="agent-tools">
+  <defs>
+    <linearGradient id="at-fav" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5b54e8"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="44" height="44" rx="11" fill="#0f1020"/>
+  <path d="M17 11 H12 V37 H17" stroke="url(#at-fav)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <path d="M31 11 H36 V37 H31" stroke="url(#at-fav)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <path d="M20 19 L25 24 L20 29" stroke="#8b85f5" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="26" y="27.4" width="5" height="2.5" rx="1.25" fill="#c4b5fd"/>
+</svg>

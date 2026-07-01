@@ -1,0 +1,59 @@
+/**
+ * Clarvis brand — Indigo / Violet.
+ * Placeholder palette shared with the rest of the clarvis.dev family.
+ * Swap these values (and docs/public/{logo,favicon,og}.svg) for real assets.
+ */
+
+:root {
+  --vp-c-brand-1: #5b54e8;
+  --vp-c-brand-2: #6d66f0;
+  --vp-c-brand-3: #8b85f5;
+  --vp-c-brand-soft: rgba(91, 84, 232, 0.14);
+
+  /* Solid brand buttons: keep a saturated indigo in both color modes. */
+  --vp-button-brand-bg: #5b54e8;
+  --vp-button-brand-hover-bg: #6d66f0;
+  --vp-button-brand-active-bg: #4f48d6;
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-text: #ffffff;
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-active-text: #ffffff;
+
+  /* Home hero. */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #6d66f0 30%, #a78bfa);
+  --vp-home-hero-image-background-image: linear-gradient(
+    120deg,
+    rgba(91, 84, 232, 0.55),
+    rgba(167, 139, 250, 0.55)
+  );
+  --vp-home-hero-image-filter: blur(56px);
+}
+
+.dark {
+  --vp-c-brand-1: #a5a0f5;
+  --vp-c-brand-2: #8b85f5;
+  --vp-c-brand-3: #6d66f0;
+  --vp-c-brand-soft: rgba(139, 133, 245, 0.16);
+
+  --vp-home-hero-name-background: linear-gradient(120deg, #8b85f5 30%, #c4b5fd);
+  --vp-home-hero-image-background-image: linear-gradient(
+    120deg,
+    rgba(109, 102, 240, 0.5),
+    rgba(167, 139, 250, 0.5)
+  );
+}
+
+@media (min-width: 640px) {
+  :root {
+    --vp-home-hero-image-filter: blur(68px);
+  }
+}
+
+@media (min-width: 960px) {
+  :root {
+    --vp-home-hero-image-filter: blur(72px);
+  }
+}

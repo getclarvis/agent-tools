@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none" role="img" aria-label="@clarvis/agent-tools — coding tools for your LLM agent">
+  <defs>
+    <linearGradient id="og-bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b0b16"/>
+      <stop offset="1" stop-color="#171433"/>
+    </linearGradient>
+    <linearGradient id="og-grad" x1="120" y1="200" x2="360" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5b54e8"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="og-name" x1="430" y1="250" x2="900" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b85f5"/>
+      <stop offset="1" stop-color="#c4b5fd"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#og-bg)"/>
+  <circle cx="1040" cy="120" r="320" fill="#5b54e8" opacity="0.10"/>
+
+  <!-- logomark -->
+  <g transform="translate(120 235) scale(3.33)">
+    <path d="M16 9 H11 V39 H16" stroke="url(#og-grad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+    <path d="M32 9 H37 V39 H32" stroke="url(#og-grad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+    <path d="M19 18 L25 24 L19 30" stroke="#8b85f5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="26" y="27.4" width="5.4" height="2.6" rx="1.3" fill="#c4b5fd"/>
+  </g>
+
+  <text x="432" y="296" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="64" font-weight="800" fill="url(#og-name)">@clarvis/agent-tools</text>
+  <text x="436" y="352" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="27" font-weight="500" fill="#c7c9d9">Coding tools for your LLM agent — read, search, edit, run</text>
+  <text x="436" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26" font-weight="500" fill="#8b85f5">clarvis.dev</text>
+
+  <text x="120" y="560" font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="500" fill="#7c7f96">Transport-agnostic library · read/edit/patch/bash/grep · workspace-confined · Node ≥ 20</text>
+</svg>
