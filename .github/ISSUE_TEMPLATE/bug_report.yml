@@ -1,0 +1,93 @@
+name: Bug report
+description: Report a problem with @clarvis/agent-tools
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please **do not include secrets** (API keys, tokens) in this report.
+        For security vulnerabilities, use the private process in
+        [SECURITY.md](https://github.com/getclarvis/agent-tools/blob/main/SECURITY.md) instead.
+  - type: input
+    id: version
+    attributes:
+      label: agent-tools version
+      placeholder: e.g. 0.1.0 (output of `npm ls @clarvis/agent-tools`)
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: e.g. 20.11.0 (output of `node --version`; agent-tools requires >= 20)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. macOS 15.1, Ubuntu 24.04, Fedora 44
+    validations:
+      required: true
+  - type: dropdown
+    id: ripgrep
+    attributes:
+      label: Is ripgrep (rg) on PATH?
+      description: Affects which grep backend runs (ripgrep vs in-process fallback).
+      options:
+        - 'Yes'
+        - 'No'
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Which tool(s) are involved?
+      multiple: true
+      options:
+        - read_file
+        - list_dir
+        - glob
+        - grep
+        - write_file
+        - edit_file
+        - multi_edit
+        - apply_patch
+        - bash
+        - createAgentTools / dispatch / config
+  - type: dropdown
+    id: config
+    attributes:
+      label: Relevant config
+      multiple: true
+      options:
+        - 'readOnly: true'
+        - 'confineToWorkspace: false'
+        - custom maxOutputBytes / maxFileBytes
+        - custom bash timeout
+        - defaults
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include a minimal snippet — the `createAgentTools(...)` options and the tool call.
+      placeholder: |
+        1. const tools = createAgentTools({ workspaceRoot: "/path" })
+        2. await tools.callTool("edit_file", { ... })
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+      description: What did you expect, and what happened instead? Include the result's `error` code if present.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output / stderr
+      description: Paste the tool result text and any `clarvis-agent-tools:` stderr lines (redact secrets).
+      render: text

@@ -8,3 +8,7 @@ coverage/
 .clarvis-tmp-*
 tests/live/recordings/*
 !tests/live/recordings/.gitkeep
+
+# VitePress docs build output
+docs/.vitepress/dist/
+docs/.vitepress/cache/

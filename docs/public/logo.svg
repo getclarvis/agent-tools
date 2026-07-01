@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="agent-tools">
+  <defs>
+    <linearGradient id="at-grad" x1="6" y1="6" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5b54e8"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <!-- the loop -->
+  <circle cx="24" cy="24" r="14" stroke="url(#at-grad)" stroke-width="3" opacity="0.45"/>
+  <!-- lead — magatama (tomoe comma) -->
+  <g fill="url(#at-grad)">
+    <circle cx="23.6" cy="22.6" r="4.7"/>
+    <path d="M28 24 C28 27.6 25.4 30.9 21.4 31.4 C24 29.5 25.7 26.4 24.9 23.2 Z"/>
+  </g>
+  <!-- workers orbiting on the loop -->
+  <circle cx="24" cy="10" r="3.6" fill="#6d66f0"/>
+  <circle cx="36.12" cy="31" r="3.6" fill="#8b85f5"/>
+  <circle cx="11.88" cy="31" r="3.6" fill="#a78bfa"/>
+</svg>
