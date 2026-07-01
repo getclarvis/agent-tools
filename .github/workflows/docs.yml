@@ -44,6 +44,8 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
+        with:
+          enablement: true # auto-enable Pages (source: GitHub Actions) on first run
 
       - name: Build docs
         run: npm run docs:build
