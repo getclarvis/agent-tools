@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { applyPatch, parsePatch, type ParsedDiff } from "diff";
+import { applyPatch, parsePatch, type StructuredPatch } from "diff";
 import { ToolError, fsError } from "../errors.js";
 import { resolvePath, displayPath } from "../lib/paths.js";
 import { applyOpsAtomic, withFileLocks, type FileOp } from "../lib/atomic.js";
@@ -32,7 +32,7 @@ async function readEditableFile(
   return decoded;
 }
 
-function countChanges(p: ParsedDiff): { adds: number; dels: number } {
+function countChanges(p: StructuredPatch): { adds: number; dels: number } {
   let adds = 0;
   let dels = 0;
   for (const h of p.hunks) {
@@ -44,12 +44,12 @@ function countChanges(p: ParsedDiff): { adds: number; dels: number } {
   return { adds, dels };
 }
 
-function firstFailingHunk(source: string, p: ParsedDiff): number | undefined {
+function firstFailingHunk(source: string, p: StructuredPatch): number | undefined {
   let cur = source;
   for (let i = 0; i < p.hunks.length; i++) {
     const hunk = p.hunks[i];
     if (hunk === undefined) continue;
-    const single: ParsedDiff = { ...p, hunks: [hunk] };
+    const single: StructuredPatch = { ...p, hunks: [hunk] };
     const r = applyPatch(cur, single);
     if (r === false) return i + 1;
     cur = r;
@@ -83,7 +83,7 @@ export const applyPatchTool: ToolDef = {
   async handler(args, config) {
     const patchText = args.patch as string;
 
-    let parsed: ParsedDiff[];
+    let parsed: StructuredPatch[];
     try {
       parsed = parsePatch(patchText);
     } catch (err) {
@@ -116,7 +116,7 @@ export const applyPatchTool: ToolDef = {
 };
 
 async function applyParsed(
-  parsed: ParsedDiff[],
+  parsed: StructuredPatch[],
   config: { workspaceRoot: string; maxFileBytes: number; confineToWorkspace: boolean },
 ): Promise<string> {
   const ops: FileOp[] = [];
