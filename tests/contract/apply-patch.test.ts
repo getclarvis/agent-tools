@@ -185,6 +185,24 @@ describe("apply_patch", () => {
     },
   );
 
+  it.skipIf(isRoot)(
+    "removes directories it created when the batch fails (no orphaned dirs)",
+    async () => {
+      mkdirSync(path.join(root, "locked"));
+      chmod(root, "locked", 0o500);
+      const patch =
+        `--- /dev/null\n+++ b/newdir/a.txt\n@@ -0,0 +1,1 @@\n+hello\n` +
+        `--- /dev/null\n+++ b/locked/b.txt\n@@ -0,0 +1,1 @@\n+world\n`;
+      const r = await callTool("apply_patch", { patch }, config);
+      expect(r.isError).toBe(true);
+
+      expect(exists(root, "newdir")).toBe(false);
+      expect(exists(root, "locked/b.txt")).toBe(false);
+      chmod(root, "locked", 0o700);
+      expect(readdirSync(root).filter((f) => f.startsWith(".clarvis-tmp"))).toHaveLength(0);
+    },
+  );
+
   it("refuses multiple blocks targeting the same file (no silent last-wins)", async () => {
     write(root, "g.txt", "x1\nx2\nx3\n");
     const patch =

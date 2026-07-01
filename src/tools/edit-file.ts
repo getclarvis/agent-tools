@@ -214,8 +214,9 @@ export const editFile: ToolDef = {
       },
       (rel) =>
         fuzzy
-          ? `Replaced 1 occurrence in ${rel} (matched after whitespace-tolerant search; ` +
-            "verify the result)."
+          ? `Replaced 1 occurrence in ${rel} (matched after a whitespace-tolerant search; the ` +
+            "matched region — including its leading indentation — was replaced by new_string " +
+            "verbatim, so re-read the file to verify the indentation is correct)."
           : `Replaced ${count} ${count === 1 ? "occurrence" : "occurrences"} in ${rel}.`,
     );
   },

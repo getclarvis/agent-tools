@@ -29,9 +29,14 @@ function tempPath(target: string): string {
   return path.join(dir, `.clarvis-tmp-${uniqueToken()}`);
 }
 
-async function stage(target: string, content: string): Promise<string> {
+interface Staged {
+  tmp: string;
+  createdDir: string | undefined;
+}
+
+async function stage(target: string, content: string): Promise<Staged> {
   const dir = path.dirname(target);
-  await fs.mkdir(dir, { recursive: true });
+  const createdDir = await fs.mkdir(dir, { recursive: true });
   const tmp = tempPath(target);
   const fh = await fs.open(tmp, "wx");
   try {
@@ -40,7 +45,13 @@ async function stage(target: string, content: string): Promise<string> {
   } finally {
     await fh.close();
   }
-  return tmp;
+  return { tmp, createdDir };
+}
+
+async function removeCreatedDirs(dirs: (string | undefined)[]): Promise<void> {
+  for (const dir of dirs) {
+    if (dir !== undefined) await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 async function captureMode(target: string): Promise<number | undefined> {
@@ -78,13 +89,14 @@ async function fsyncDir(dir: string): Promise<void> {
 
 export async function writeAtomic(target: string, content: string): Promise<void> {
   await assertNotSymlink(target);
-  const tmp = await stage(target, content);
+  const { tmp, createdDir } = await stage(target, content);
   try {
     const mode = await captureMode(target);
     if (mode !== undefined) await fs.chmod(tmp, mode);
     await fs.rename(tmp, target);
   } catch (err) {
     await fs.rm(tmp, { force: true });
+    await removeCreatedDirs([createdDir]);
     throw err;
   }
   await fsyncDir(path.dirname(target));
@@ -108,17 +120,24 @@ async function cleanupStaged(staged: Map<string, string>): Promise<void> {
   for (const tmp of staged.values()) await fs.rm(tmp, { force: true }).catch(() => {});
 }
 
-async function stageAll(ops: FileOp[]): Promise<Map<string, string>> {
+async function stageAll(
+  ops: FileOp[],
+  createdDirs: (string | undefined)[],
+): Promise<Map<string, string>> {
   const staged = new Map<string, string>();
   try {
     for (const op of ops) {
       if (op.type === "create" || op.type === "modify") {
-        staged.set(op.path, await stage(op.path, op.content ?? ""));
+        const { tmp, createdDir } = await stage(op.path, op.content ?? "");
+        staged.set(op.path, tmp);
+        createdDirs.push(createdDir);
       } else if (op.type === "rename") {
         if (op.content !== undefined) {
-          staged.set(op.path, await stage(op.path, op.content));
+          const { tmp, createdDir } = await stage(op.path, op.content);
+          staged.set(op.path, tmp);
+          createdDirs.push(createdDir);
         } else {
-          await fs.mkdir(path.dirname(op.path), { recursive: true });
+          createdDirs.push(await fs.mkdir(path.dirname(op.path), { recursive: true }));
         }
       }
     }
@@ -269,29 +288,35 @@ async function commitWithRollback(
 }
 
 export async function applyOpsAtomic(ops: FileOp[]): Promise<void> {
-  const staged = await stageAll(ops);
-
-  let modes: Map<string, number | undefined>;
+  const createdDirs: (string | undefined)[] = [];
   try {
-    modes = await validateTargets(ops);
+    const staged = await stageAll(ops, createdDirs);
+
+    let modes: Map<string, number | undefined>;
+    try {
+      modes = await validateTargets(ops);
+    } catch (err) {
+      await cleanupStaged(staged);
+      throw err;
+    }
+
+    const committed = await commitWithRollback(ops, staged, modes);
+
+    const dirs = new Set<string>();
+    for (const op of ops) {
+      dirs.add(path.dirname(op.path));
+      if (op.type === "rename" && op.from !== undefined) dirs.add(path.dirname(op.from));
+    }
+    for (const dir of dirs) {
+      await fsyncDir(dir);
+    }
+
+    for (const { backup, fromBackup } of committed) {
+      if (backup !== undefined) await fs.rm(backup, { force: true }).catch(() => {});
+      if (fromBackup !== undefined) await fs.rm(fromBackup, { force: true }).catch(() => {});
+    }
   } catch (err) {
-    await cleanupStaged(staged);
+    await removeCreatedDirs(createdDirs);
     throw err;
-  }
-
-  const committed = await commitWithRollback(ops, staged, modes);
-
-  const dirs = new Set<string>();
-  for (const op of ops) {
-    dirs.add(path.dirname(op.path));
-    if (op.type === "rename" && op.from !== undefined) dirs.add(path.dirname(op.from));
-  }
-  for (const dir of dirs) {
-    await fsyncDir(dir);
-  }
-
-  for (const { backup, fromBackup } of committed) {
-    if (backup !== undefined) await fs.rm(backup, { force: true }).catch(() => {});
-    if (fromBackup !== undefined) await fs.rm(fromBackup, { force: true }).catch(() => {});
   }
 }

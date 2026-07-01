@@ -55,7 +55,8 @@ export async function dispatch(
   }
 
   const validate = validators.get(name)!;
-  if (!validate(args)) {
+  const filled = structuredClone(args);
+  if (!validate(filled)) {
     const detail = ajv.errorsText(validate.errors, { separator: "; " });
     return {
       isError: true,
@@ -64,7 +65,7 @@ export async function dispatch(
   }
 
   try {
-    const text = await tool.handler(args, config);
+    const text = await tool.handler(filled, config);
     return { isError: false, text: tool.bounded ? text : bound(text, config.maxOutputBytes) };
   } catch (err) {
     return { isError: true, text: serializeError(err) };

@@ -1,3 +1,5 @@
+import { warn } from "./lib/log.js";
+
 export type ErrorCode =
   | "invalid_input"
   | "not_found"
@@ -30,7 +32,7 @@ export function serializeError(err: unknown): string {
     return JSON.stringify({ error: err.code, message: err.message, ...err.fields });
   }
   const detail = err instanceof Error ? (err.stack ?? err.message) : String(err);
-  process.stderr.write(`clarvis-agent-tools: internal error: ${detail}\n`);
+  warn(`clarvis-agent-tools: internal error: ${detail}\n`);
   return JSON.stringify({ error: "internal", message: "internal error" });
 }
 
