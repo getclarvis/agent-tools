@@ -1,0 +1,61 @@
+{
+  "name": "@clarvis/agent-tools",
+  "version": "0.1.0",
+  "description": "A minimal, opinionated set of coding tools (read/write/edit/patch/bash/grep/glob) for driving an LLM agent over a workspace — usable as a plain library.",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "SPEC.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "pre-commit": "npm run typecheck && npm run format:check && npm test",
+    "prepublishOnly": "test -f README.md && test -f SPEC.md && npm run build && npm test"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "diff": "^7.0.0",
+    "ignore": "^6.0.2",
+    "tinyglobby": "^0.2.10"
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.0",
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/getclarvis/agent-tools.git"
+  },
+  "homepage": "https://github.com/getclarvis/agent-tools#readme",
+  "bugs": {
+    "url": "https://github.com/getclarvis/agent-tools/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
