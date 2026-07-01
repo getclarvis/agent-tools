@@ -57,9 +57,7 @@ export async function callTool(
   let json: Record<string, unknown> = {};
   try {
     json = JSON.parse(r.text) as Record<string, unknown>;
-  } catch {
-    json = {};
-  }
+  } catch {}
   return { isError: r.isError, text: r.text, json };
 }
 
