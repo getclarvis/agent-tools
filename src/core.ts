@@ -45,6 +45,7 @@ export async function dispatch(
   name: string,
   args: Record<string, unknown>,
   config: ServerConfig,
+  signal?: AbortSignal,
 ): Promise<DispatchResult> {
   const tool = getTool(name, selectSurface(config.readOnly));
   if (!tool) {
@@ -65,7 +66,7 @@ export async function dispatch(
   }
 
   try {
-    const text = await tool.handler(filled, config);
+    const text = await tool.handler(filled, config, signal);
     return { isError: false, text: tool.bounded ? text : bound(text, config.maxOutputBytes) };
   } catch (err) {
     return { isError: true, text: serializeError(err) };

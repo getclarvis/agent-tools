@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1]
+
+### Added
+
+- **Cooperative cancellation.** `dispatch(name, args, config, signal?)` now accepts an optional
+  `AbortSignal` and threads it into each `ToolDef.handler(args, config, signal?)`. `bash` honors it:
+  when the signal aborts, the whole spawned process group is `SIGKILL`ed and the call rejects with a
+  new `aborted` error code — so a cancelled run no longer leaves a long-running command running (or
+  the caller blocked) until the command's own timeout.
+
 ## [0.1.0] - 2026-07-01
 
 Initial public release.

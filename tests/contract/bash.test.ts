@@ -41,6 +41,24 @@ describe("bash", () => {
     expect(r.json.timeout_ms).toBe(100);
   });
 
+  it("aborting the signal kills a long-running command and returns an aborted error", async () => {
+    const ac = new AbortController();
+    const p = callTool("bash", { command: "sleep 30", timeout_ms: 60000 }, config, ac.signal);
+    await new Promise((r) => setTimeout(r, 100));
+    ac.abort();
+    const r = await p;
+    expect(r.isError).toBe(true);
+    expect(r.json.error).toBe("aborted");
+  });
+
+  it("an already-aborted signal returns an aborted error without hanging", async () => {
+    const ac = new AbortController();
+    ac.abort();
+    const r = await callTool("bash", { command: "sleep 30", timeout_ms: 60000 }, config, ac.signal);
+    expect(r.isError).toBe(true);
+    expect(r.json.error).toBe("aborted");
+  });
+
   it("clamps an overflowing timeout_ms instead of firing immediately (finding 1.2)", async () => {
     const r = await callTool("bash", { command: "echo hi", timeout_ms: 3_000_000_000 }, config);
     expect(r.isError).toBe(false);

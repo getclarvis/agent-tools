@@ -1,6 +1,6 @@
 {
   "name": "@clarvis/agent-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A minimal, opinionated set of coding tools (read/write/edit/patch/bash/grep/glob) for driving an LLM agent over a workspace — usable as a plain library.",
   "type": "module",
   "main": "dist/index.js",

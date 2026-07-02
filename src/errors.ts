@@ -10,6 +10,7 @@ export type ErrorCode =
   | "patch_failed"
   | "io_error"
   | "timeout"
+  | "aborted"
   | "output_limit"
   | "too_large"
   | "path_escape"
