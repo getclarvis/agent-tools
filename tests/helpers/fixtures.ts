@@ -52,8 +52,9 @@ export async function callTool(
   name: string,
   args: Record<string, unknown>,
   config: ServerConfig,
+  signal?: AbortSignal,
 ): Promise<CallResult> {
-  const r = await dispatch(name, args, config);
+  const r = await dispatch(name, args, config, signal);
   let json: Record<string, unknown> = {};
   try {
     json = JSON.parse(r.text) as Record<string, unknown>;

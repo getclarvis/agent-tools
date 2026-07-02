@@ -8,5 +8,9 @@ export interface ToolDef {
 
   bounded?: boolean;
 
-  handler: (args: Record<string, unknown>, config: ServerConfig) => Promise<string>;
+  handler: (
+    args: Record<string, unknown>,
+    config: ServerConfig,
+    signal?: AbortSignal,
+  ) => Promise<string>;
 }

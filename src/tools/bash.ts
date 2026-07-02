@@ -83,7 +83,7 @@ export const bash: ToolDef = {
     required: ["command"],
     additionalProperties: false,
   },
-  async handler(args, config) {
+  async handler(args, config, signal) {
     const command = args.command as string;
     const cwdArg = args.cwd as string | undefined;
     const cwd = cwdArg
@@ -94,7 +94,7 @@ export const bash: ToolDef = {
 
     await statDirectory(cwd, cwdArg ?? cwd);
 
-    return runCommand(command, cwd, timeoutMs, config);
+    return runCommand(command, cwd, timeoutMs, config, signal);
   },
 };
 
@@ -103,6 +103,7 @@ function runCommand(
   cwd: string,
   timeoutMs: number,
   config: ServerConfig,
+  signal?: AbortSignal,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     let child;
@@ -121,6 +122,7 @@ function runCommand(
     const stdoutSink: Sink = { text: "", bytes: 0, capped: false };
     const stderrSink: Sink = { text: "", bytes: 0, capped: false };
     let timedOut = false;
+    let aborted = false;
     let outputLimited = false;
     let settled = false;
     let drainTimer: ReturnType<typeof setTimeout> | undefined;
@@ -131,6 +133,11 @@ function runCommand(
       } catch {
         child.kill("SIGKILL");
       }
+    };
+
+    const onAbort = (): void => {
+      aborted = true;
+      killGroup();
     };
 
     const onData =
@@ -158,6 +165,11 @@ function runCommand(
       killGroup();
     }, timeoutMs);
 
+    if (signal !== undefined) {
+      if (signal.aborted) onAbort();
+      else signal.addEventListener("abort", onAbort, { once: true });
+    }
+
     const teardown = (): void => {
       child.stdout?.removeAllListeners("data");
       child.stderr?.removeAllListeners("data");
@@ -171,6 +183,7 @@ function runCommand(
       settled = true;
       clearTimeout(timer);
       if (drainTimer) clearTimeout(drainTimer);
+      signal?.removeEventListener("abort", onAbort);
       teardown();
       return true;
     };
@@ -180,6 +193,11 @@ function runCommand(
 
       void finalizeOutput(config, stdoutSink.text, stderrSink.text).then(
         ({ stdout, stderr }) => {
+          if (aborted) {
+            reject(new ToolError("aborted", "Command aborted (run cancelled)", { stdout, stderr }));
+            return;
+          }
+
           if (timedOut) {
             reject(
               new ToolError("timeout", `Command exceeded ${timeoutMs}ms`, {
