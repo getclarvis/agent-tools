@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { tools } from "../../src/tools/registry.js";
 import { dispatch, listTools } from "../../src/core.js";
-import { makeWorkspace, cleanup, makeConfig, callTool, write } from "../helpers/fixtures.js";
+import {
+  makeWorkspace,
+  cleanup,
+  makeConfig,
+  callTool,
+  write,
+  resultText,
+} from "../helpers/fixtures.js";
 import type { ServerConfig } from "../../src/config.js";
 
 describe("core / registry", () => {
@@ -14,7 +21,7 @@ describe("core / registry", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("exposes exactly the nine fixed tools", () => {
+  it("exposes exactly the fourteen fixed tools", () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -24,8 +31,13 @@ describe("core / registry", () => {
         "glob",
         "grep",
         "list_dir",
+        "monitor_list",
+        "monitor_poll",
+        "monitor_start",
+        "monitor_stop",
         "multi_edit",
         "read_file",
+        "read_image",
         "write_file",
       ].sort(),
     );
@@ -40,7 +52,7 @@ describe("core / registry", () => {
   it("an unknown tool name returns a not_found tool error (no throw)", async () => {
     const r = await dispatch("does_not_exist", {}, config);
     expect(r.isError).toBe(true);
-    expect(JSON.parse(r.text)).toMatchObject({ error: "not_found" });
+    expect(JSON.parse(resultText(r.content))).toMatchObject({ error: "not_found" });
   });
 });
 
@@ -65,7 +77,7 @@ describe("dispatch — input validation", () => {
   it("returns invalid_input with a detail message when an arg is wrong-typed", async () => {
     const r = await dispatch("read_file", { path: 123 }, config);
     expect(r.isError).toBe(true);
-    const json = JSON.parse(r.text) as Record<string, unknown>;
+    const json = JSON.parse(resultText(r.content)) as Record<string, unknown>;
     expect(json.error).toBe("invalid_input");
     expect(json.message).not.toBe("invalid arguments");
   });
@@ -73,7 +85,7 @@ describe("dispatch — input validation", () => {
   it("rejects an unknown argument as invalid_input", async () => {
     const r = await dispatch("read_file", { path: "a.txt", bogus: true }, config);
     expect(r.isError).toBe(true);
-    expect(JSON.parse(r.text)).toMatchObject({ error: "invalid_input" });
+    expect(JSON.parse(resultText(r.content))).toMatchObject({ error: "invalid_input" });
   });
 });
 
@@ -91,21 +103,21 @@ describe("dispatch — success and error routing", () => {
     write(root, "hello.txt", "line one\nline two\n");
     const r = await dispatch("read_file", { path: "hello.txt" }, config);
     expect(r.isError).toBe(false);
-    expect(r.text).toContain("line one");
-    expect(r.text).toContain("line two");
+    expect(resultText(r.content)).toContain("line one");
+    expect(resultText(r.content)).toContain("line two");
   });
 
   it("routes an unbounded tool's output through the byte-bounder on success", async () => {
     write(root, "a.txt", "x");
     const r = await dispatch("list_dir", {}, config);
     expect(r.isError).toBe(false);
-    expect(r.text).toContain("a.txt");
+    expect(resultText(r.content)).toContain("a.txt");
   });
 
   it("catches a handler error thrown at runtime and serializes it", async () => {
     const r = await dispatch("read_file", { path: "does-not-exist.txt" }, config);
     expect(r.isError).toBe(true);
-    expect(JSON.parse(r.text)).toMatchObject({ error: "not_found" });
+    expect(JSON.parse(resultText(r.content))).toMatchObject({ error: "not_found" });
   });
 });
 
@@ -132,6 +144,6 @@ describe("listTools surface", () => {
   it("honours the read-only surface", () => {
     const ro = listTools(makeConfig(root, { readOnly: true }));
     const names = ro.map((t) => t.name).sort();
-    expect(names).toEqual(["glob", "grep", "list_dir", "read_file"]);
+    expect(names).toEqual(["glob", "grep", "list_dir", "read_file", "read_image"]);
   });
 });

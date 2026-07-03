@@ -7,6 +7,44 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Changed
+
+- **BREAKING: tool results are now content parts.** `DispatchResult.text: string` is
+  replaced by `DispatchResult.content: ContentPart[]` — a `TextPart` (`{ type: "text", text }`)
+  or an `ImagePart` (`{ type: "image", data, mimeType }`, `data` base64) — aligning with the
+  content-block model common to modern agent/tool APIs and letting a tool return an image. Tool
+  handlers may still return a plain `string` (sugar for a single text part). Errors are
+  unchanged in spirit: `isError` is set and the message rides a single text part. Consumers
+  that read `.text` must read `.content` (text parts carry the text).
+
+### Added
+
+- **`read_image` tool.** Reads an image file (PNG, JPEG, GIF, or WebP), validated by magic
+  bytes, and returns it as a base64 image part a vision-capable model can view. Available in
+  the read-only surface. Refuses non-image files (`not_an_image`) and files larger than
+  `MAX_IMAGE_BYTES`.
+- **`maxImageBytes` / `MAX_IMAGE_BYTES`** config knob (default 5000000) bounding the size of
+  a file `read_image` will load; exported `DEFAULT_MAX_IMAGE_BYTES`.
+- Public content-part types `ContentPart`, `TextPart`, and `ImagePart`, plus a
+  `contentText(content)` helper that concatenates the text parts of a result.
+- **Background process monitors — `monitor_start`, `monitor_poll`, `monitor_stop`, and
+  `monitor_list`.** `bash` blocks until a command exits; a monitor is its complement for
+  commands that do not — a dev server, `tail -f`, a watcher. `monitor_start` launches a command
+  in the background (its combined stdout/stderr streamed to a `.clarvis/monitor-<id>.log`) and
+  returns an id immediately, optionally blocking until the output matches a `ready_when` regex.
+  `monitor_poll` reads new output since a byte offset (with an optional `match` regex filter) and
+  reports whether the process is still running plus its natural exit code. `monitor_stop` signals
+  the process group (SIGTERM, then SIGKILL) and cleans up; `monitor_list` surfaces every monitor
+  so leaked ones can be found and stopped. These tools hold no state in-process: each call
+  re-derives the truth from the `.clarvis/` sidecars and the live OS process.
+- **`monitorReadyTimeoutMs` / `MONITOR_READY_TIMEOUT_MS`** (default 30000) and **`maxMonitors` /
+  `MAX_MONITORS`** (default 32) config knobs, with exported `DEFAULT_MONITOR_READY_TIMEOUT_MS`
+  and `DEFAULT_MAX_MONITORS`; new error codes `monitor_not_found` and `too_many_monitors`.
+- **`sweepMonitors(workspaceRoot)`** — a liveness-aware reaper (companion to `sweepSpillDir`)
+  that removes the sidecars of monitors whose process has exited, leaving live ones untouched.
+
 ## [0.1.1]
 
 ### Added
@@ -46,5 +84,6 @@ Initial public release.
 - **VitePress documentation site** ([agent-tools.clarvis.dev](https://agent-tools.clarvis.dev)) and
   the canonical per-tool [`SPEC.md`](SPEC.md).
 
-[Unreleased]: https://github.com/getclarvis/agent-tools/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/getclarvis/agent-tools/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/getclarvis/agent-tools/compare/v0.1.1...v0.2.0
 [0.1.0]: https://github.com/getclarvis/agent-tools/releases/tag/v0.1.0

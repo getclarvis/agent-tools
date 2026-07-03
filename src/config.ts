@@ -9,9 +9,15 @@ export interface ServerConfig {
 
   maxFileBytes: number;
 
+  maxImageBytes: number;
+
   bashTimeoutMs: number;
 
   bashTimeoutMaxMs: number;
+
+  monitorReadyTimeoutMs: number;
+
+  maxMonitors: number;
 
   ripgrepAvailable: boolean;
 
@@ -22,8 +28,11 @@ export interface ServerConfig {
 
 export const DEFAULT_MAX_OUTPUT_BYTES = 131072;
 export const DEFAULT_MAX_FILE_BYTES = 20_000_000;
+export const DEFAULT_MAX_IMAGE_BYTES = 5_000_000;
 export const DEFAULT_BASH_TIMEOUT_MS = 120000;
 export const DEFAULT_BASH_TIMEOUT_MAX_MS = 600000;
+export const DEFAULT_MONITOR_READY_TIMEOUT_MS = 30000;
+export const DEFAULT_MAX_MONITORS = 32;
 const MIN_OUTPUT_BYTES = 1024;
 const MIN_FILE_BYTES = 1024;
 
@@ -138,9 +147,15 @@ export interface AgentToolsOptions {
 
   maxFileBytes?: number;
 
+  maxImageBytes?: number;
+
   bashTimeoutMs?: number;
 
   bashTimeoutMaxMs?: number;
+
+  monitorReadyTimeoutMs?: number;
+
+  maxMonitors?: number;
 
   probeRipgrep?: () => boolean;
 }
@@ -175,8 +190,19 @@ export function resolveConfig(options: AgentToolsOptions): ServerConfig {
       MIN_FILE_BYTES,
       "maxFileBytes",
     ),
+    maxImageBytes: requireMin(
+      options.maxImageBytes ?? DEFAULT_MAX_IMAGE_BYTES,
+      MIN_FILE_BYTES,
+      "maxImageBytes",
+    ),
     bashTimeoutMs,
     bashTimeoutMaxMs,
+    monitorReadyTimeoutMs: requireMin(
+      options.monitorReadyTimeoutMs ?? DEFAULT_MONITOR_READY_TIMEOUT_MS,
+      1,
+      "monitorReadyTimeoutMs",
+    ),
+    maxMonitors: requireMin(options.maxMonitors ?? DEFAULT_MAX_MONITORS, 1, "maxMonitors"),
     ripgrepAvailable: (options.probeRipgrep ?? probeRipgrep)(),
     readOnly: options.readOnly ?? false,
     confineToWorkspace: options.confineToWorkspace ?? true,
@@ -205,6 +231,13 @@ export function buildConfig(
   );
   assertTimeoutOrder(bashTimeoutMs, bashTimeoutMaxMs, "BASH_TIMEOUT_MS", "BASH_TIMEOUT_MAX_MS");
 
+  const monitorReadyTimeoutMs = parsePositiveInt(
+    env.MONITOR_READY_TIMEOUT_MS,
+    DEFAULT_MONITOR_READY_TIMEOUT_MS,
+    "MONITOR_READY_TIMEOUT_MS",
+  );
+  const maxMonitors = parsePositiveInt(env.MAX_MONITORS, DEFAULT_MAX_MONITORS, "MAX_MONITORS");
+
   return resolveConfig({
     workspaceRoot: rawRoot,
     maxOutputBytes: parsePositiveInt(
@@ -219,8 +252,16 @@ export function buildConfig(
       "MAX_FILE_BYTES",
       MIN_FILE_BYTES,
     ),
+    maxImageBytes: parsePositiveInt(
+      env.MAX_IMAGE_BYTES,
+      DEFAULT_MAX_IMAGE_BYTES,
+      "MAX_IMAGE_BYTES",
+      MIN_FILE_BYTES,
+    ),
     bashTimeoutMs,
     bashTimeoutMaxMs,
+    monitorReadyTimeoutMs,
+    maxMonitors,
     readOnly: resolveReadOnly(argv, env),
     confineToWorkspace: resolveConfine(argv, env),
     probeRipgrep: probe,

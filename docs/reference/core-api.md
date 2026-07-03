@@ -33,8 +33,8 @@ The advertised surface for `config` — `{ name, description, inputSchema }` per
 ## The registry
 
 ```ts
-const tools: ToolDef[]; // all nine
-const readOnlyTools: ToolDef[]; // read_file, list_dir, glob, grep
+const tools: ToolDef[]; // all fourteen
+const readOnlyTools: ToolDef[]; // read_file, read_image, list_dir, glob, grep
 
 function selectSurface(readOnly: boolean): ToolDef[];
 function getTool(name: string, surface?: ToolDef[]): ToolDef | undefined;
@@ -54,7 +54,11 @@ interface ToolDef {
   description: string;
   inputSchema: Record<string, unknown>; // JSON Schema, ajv-validated on dispatch
   bounded?: boolean; // when true, the handler bounds its own output (dispatch skips re-bounding)
-  handler: (args: Record<string, unknown>, config: ServerConfig) => Promise<string>;
+  handler: (
+    args: Record<string, unknown>,
+    config: ServerConfig,
+    signal?: AbortSignal,
+  ) => Promise<string | ContentPart[]>; // a plain string is sugar for a single text part
 }
 ```
 
@@ -71,13 +75,27 @@ function sweepSpillDir(workspaceRoot: string): Promise<void>;
 Removes stale `bash` spill files from the `.clarvis/` directory under `workspaceRoot`. Safe to call
 periodically in a long-lived process. See [Limits & spill](/guide/limits-and-spill).
 
+## `sweepMonitors`
+
+```ts
+function sweepMonitors(workspaceRoot: string): Promise<void>;
+```
+
+The companion to `sweepSpillDir` for background monitors. It removes the `.clarvis/monitor-<id>.*`
+sidecars of monitors whose process has already **exited**, and leaves live ones untouched. A
+monitor's process outlives the tool call (and host exit), so a forgotten monitor leaks — call
+`sweepMonitors` at session start, and use `monitor_list` / `monitor_stop` to find and stop any that
+are still running. See [The tools](/reference/tools#monitor_start) and
+[Limits & spill](/guide/limits-and-spill).
+
 ## Errors
 
 ```ts
 type ErrorCode =
-  | "invalid_input" | "not_found" | "not_a_file" | "is_binary"
+  | "invalid_input" | "not_found" | "not_a_file" | "is_binary" | "not_an_image"
   | "no_match" | "ambiguous_match" | "patch_failed" | "io_error"
-  | "timeout" | "output_limit" | "too_large" | "path_escape" | "internal";
+  | "timeout" | "aborted" | "output_limit" | "too_large" | "path_escape"
+  | "monitor_not_found" | "too_many_monitors" | "internal";
 
 class ToolError extends Error {
   readonly code: ErrorCode;

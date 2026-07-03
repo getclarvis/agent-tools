@@ -88,8 +88,8 @@ serialization for you — the transport just moves `{ isError, text }` across th
 If you need the tools themselves — to filter the surface, look one up, or introspect a schema — the
 registry is exported too:
 
-- `tools` — the full array of `ToolDef` (all nine tools).
-- `readOnlyTools` — the non-mutating subset (`read_file`, `list_dir`, `glob`, `grep`).
+- `tools` — the full array of `ToolDef` (all fourteen tools).
+- `readOnlyTools` — the non-mutating subset (`read_file`, `read_image`, `list_dir`, `glob`, `grep`).
 - `selectSurface(readOnly)` — returns `readOnlyTools` when `true`, else `tools`. This is what
   `listTools`/`dispatch` use to honor `config.readOnly`.
 - `getTool(name, surface)` — look up one tool by name within a surface, or `undefined`.

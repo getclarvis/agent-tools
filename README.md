@@ -2,8 +2,9 @@
 
 A minimal, opinionated set of coding tools for driving an LLM agent over a
 workspace, usable as a **plain library**. It gives an agent the primitives it
-needs to read, search, edit, and run code: `read_file`, `list_dir`, `glob`,
-`grep`, `write_file`, `edit_file`, `multi_edit`, `apply_patch`, and `bash`.
+needs to read, search, edit, run, and monitor code: `read_file`, `read_image`,
+`list_dir`, `glob`, `grep`, `write_file`, `edit_file`, `multi_edit`, `apply_patch`,
+`bash`, and the `monitor_*` background-process tools.
 
 This package is **transport-agnostic**: it carries no built-in transport and no
 agent loop — it is the tools, and nothing else. Advertise the surface, dispatch
@@ -35,7 +36,7 @@ The ergonomic entry point is `createAgentTools`. Give it a workspace root and it
 resolves a config, then lets you list and call tools:
 
 ```ts
-import { createAgentTools } from "@clarvis/agent-tools";
+import { createAgentTools, contentText } from "@clarvis/agent-tools";
 
 const tools = createAgentTools({ workspaceRoot: process.cwd() });
 
@@ -45,18 +46,21 @@ tools.listTools();
 // Call a tool by name with its arguments:
 const res = await tools.callTool("read_file", { path: "package.json" });
 if (res.isError) {
-  const err = JSON.parse(res.text) as { error: string; message: string };
+  const err = JSON.parse(contentText(res.content)) as { error: string; message: string };
   console.error(err.error, err.message);
 } else {
-  console.log(res.text);
+  console.log(contentText(res.content));
 }
 ```
 
-`callTool` never throws for tool-level problems — it returns
-`{ isError, text }`. On success `text` is the tool output (already bounded to
-`maxOutputBytes`); on failure `text` is a JSON error envelope
-(`{ "error": "<code>", "message": "..." , ... }`). Unknown or read-only-hidden
-tools come back as an `isError` result with code `not_found`.
+`callTool` never throws for tool-level problems — it returns `{ isError, content }`,
+an array of parts (a text part `{ type: "text", text }` or an image part
+`{ type: "image", data, mimeType }`). Most tools return one text part (bounded to
+`maxOutputBytes`) and `read_image` returns one image part; on failure `content` is a
+single text part holding a JSON error envelope
+(`{ "error": "<code>", "message": "...", ... }`). `contentText(content)` concatenates
+the text parts. Unknown or read-only-hidden tools come back as an `isError` result with
+code `not_found`.
 
 ### Options
 
@@ -65,12 +69,15 @@ tools come back as an `isError` result with code `not_found`.
 | Option               | Default      | Meaning                                                                 |
 | -------------------- | ------------ | ----------------------------------------------------------------------- |
 | `workspaceRoot`      | — (required) | Base directory; relative tool paths resolve against it.                 |
-| `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`list_dir`/`glob`/`grep`). |
+| `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`read_image`/`list_dir`/`glob`/`grep`). |
 | `confineToWorkspace` | `true`       | Reject paths that escape the workspace root (`path_escape`).             |
 | `maxOutputBytes`     | `131072`     | Per-result output cap (UTF-8 bytes); larger output is bounded.           |
 | `maxFileBytes`       | `20000000`   | Max size of an input file the text tools read; larger is rejected.      |
+| `maxImageBytes`      | `5000000`    | Max size of an image `read_image` will load; larger is rejected.        |
 | `bashTimeoutMs`      | `120000`     | Default `bash` timeout in milliseconds.                                  |
 | `bashTimeoutMaxMs`   | `600000`     | Hard ceiling a `bash` `timeout_ms` request may reach (≥ the default).    |
+| `monitorReadyTimeoutMs` | `30000`   | Default time `monitor_start` waits for `ready_when` before returning.    |
+| `maxMonitors`        | `32`         | Max live background monitors at once (beyond it, `too_many_monitors`).   |
 | `probeRipgrep`       | probes `rg`  | Override ripgrep detection (e.g. `() => false` in tests).               |
 
 ### Lower-level API
@@ -81,12 +88,12 @@ The building blocks are exported too, for custom transports:
 import { resolveConfig, dispatch, listTools, tools, type ToolDef } from "@clarvis/agent-tools";
 
 const config = resolveConfig({ workspaceRoot: process.cwd() });
-const { isError, text } = await dispatch("grep", { pattern: "TODO" }, config);
+const { isError, content } = await dispatch("grep", { pattern: "TODO" }, config);
 ```
 
 - `dispatch(name, args, config)` — validate (ajv, against each tool's JSON
   Schema), run the handler, bound the output, serialize errors. Returns
-  `{ isError, text }`.
+  `{ isError, content }` (`contentText(content)` flattens the text parts).
 - `listTools(config)` — the `{ name, description, inputSchema }[]` surface for the
   active config (respects `readOnly`).
 - `tools` / `readOnlyTools` / `getTool` / `selectSurface` — the raw `ToolDef`
@@ -100,6 +107,7 @@ const { isError, text } = await dispatch("grep", { pattern: "TODO" }, config);
 | Tool          | Mutating | Summary                                                            |
 | ------------- | -------- | ----------------------------------------------------------------- |
 | `read_file`   | no       | Read a text file (UTF-8/UTF-16), with line numbers, paging, tail. |
+| `read_image`  | no       | Read an image (PNG/JPEG/GIF/WebP) as a base64 image part.         |
 | `list_dir`    | no       | List the entries of a directory.                                  |
 | `glob`        | no       | Find files by glob, most-recently-modified first.                 |
 | `grep`        | no       | Search file contents by regular expression (optionally multiline).|
@@ -108,8 +116,13 @@ const { isError, text } = await dispatch("grep", { pattern: "TODO" }, config);
 | `multi_edit`  | yes      | Apply several `edit_file`-style edits to one file atomically.    |
 | `apply_patch` | yes      | Apply a unified diff (modify/create/delete/rename) atomically.   |
 | `bash`        | yes      | Run a shell command (`sh -c`) and capture stdout/stderr/exit.    |
+| `monitor_start` | yes    | Start a background command (dev server, watcher); return an id, optionally waiting until ready. |
+| `monitor_poll`  | yes    | Read a monitor's new output since a byte offset; report running state and exit code. |
+| `monitor_stop`  | yes    | Stop a monitor (SIGTERM→SIGKILL) and remove its files.          |
+| `monitor_list`  | yes    | List running and finished monitors.                             |
 
-In read-only mode only `read_file`, `list_dir`, `glob`, and `grep` are exposed.
+In read-only mode only `read_file`, `read_image`, `list_dir`, `glob`, and `grep` are
+exposed.
 
 See [SPEC.md](./SPEC.md) for the full per-tool contract (inputs, behavior, and
 error codes).
@@ -128,7 +141,8 @@ written to a `.clarvis/` spill file and the result points at it.
 The file-reading tools (`read_file`, `edit_file`, `multi_edit`, `apply_patch`,
 and the in-process `grep` backend) refuse to load a file larger than
 `maxFileBytes` (default 20 MB): the read/edit tools fail with `too_large`, and
-`grep` skips the oversized file.
+`grep` skips the oversized file. `read_image` applies its own `maxImageBytes`
+(default 5 MB) ceiling, also failing with `too_large`.
 
 ## Security
 

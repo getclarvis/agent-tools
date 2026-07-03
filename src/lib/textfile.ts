@@ -1,7 +1,8 @@
 import { promises as fs } from "node:fs";
-import { ToolError, fsError } from "../errors.js";
+import { ToolError } from "../errors.js";
 import { isBinary, isUtf16Bom } from "./binary.js";
 import { decodeText, type DecodedText } from "./text.js";
+import { readRawFile } from "./files.js";
 
 function rejectIfUnreadable(buf: Buffer, relForError: string): void {
   // A UTF-16 (BOM) file legitimately contains NUL bytes; decodeText handles it, so it is not
@@ -19,23 +20,7 @@ export async function readTextFile(
   relForError: string,
   maxBytes: number,
 ): Promise<DecodedText> {
-  let stat;
-  try {
-    stat = await fs.stat(target);
-  } catch (err) {
-    throw fsError(err as NodeJS.ErrnoException, relForError);
-  }
-  if (stat.isDirectory()) {
-    throw new ToolError("not_a_file", `Path is a directory: ${relForError}`, { path: relForError });
-  }
-  if (stat.size > maxBytes) {
-    throw new ToolError(
-      "too_large",
-      `File is ${stat.size} bytes, exceeding the ${maxBytes}-byte limit (raise MAX_FILE_BYTES): ${relForError}`,
-      { path: relForError, size: stat.size, limit: maxBytes },
-    );
-  }
-  const buf = await fs.readFile(target);
+  const buf = await readRawFile(target, relForError, maxBytes, "MAX_FILE_BYTES");
   rejectIfUnreadable(buf, relForError);
   return decodeText(buf);
 }

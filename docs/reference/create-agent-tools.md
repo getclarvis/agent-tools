@@ -59,7 +59,7 @@ model's tool-use / function-calling API. See [The tools](/reference/tools) for e
 ## Example
 
 ```ts
-import { createAgentTools } from "@clarvis/agent-tools";
+import { createAgentTools, contentText } from "@clarvis/agent-tools";
 
 const tools = createAgentTools({ workspaceRoot: process.cwd(), readOnly: true });
 
@@ -68,7 +68,8 @@ for (const tool of tools.listTools()) {
 }
 
 const res = await tools.callTool("grep", { pattern: "createAgentTools", output_mode: "content" });
-console.log(res.isError ? JSON.parse(res.text) : res.text);
+const text = contentText(res.content);
+console.log(res.isError ? JSON.parse(text) : text);
 ```
 
 ## See also

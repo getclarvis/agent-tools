@@ -5,6 +5,7 @@ export type ErrorCode =
   | "not_found"
   | "not_a_file"
   | "is_binary"
+  | "not_an_image"
   | "no_match"
   | "ambiguous_match"
   | "patch_failed"
@@ -14,6 +15,8 @@ export type ErrorCode =
   | "output_limit"
   | "too_large"
   | "path_escape"
+  | "monitor_not_found"
+  | "too_many_monitors"
   | "internal";
 
 export class ToolError extends Error {

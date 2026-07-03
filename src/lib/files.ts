@@ -19,6 +19,32 @@ export async function statDirectory(absPath: string, relForError: string): Promi
   return stat;
 }
 
+export async function readRawFile(
+  target: string,
+  relForError: string,
+  maxBytes: number,
+  limitHint?: string,
+): Promise<Buffer> {
+  let stat;
+  try {
+    stat = await fs.stat(target);
+  } catch (err) {
+    throw fsError(err as NodeJS.ErrnoException, relForError);
+  }
+  if (stat.isDirectory()) {
+    throw new ToolError("not_a_file", `Path is a directory: ${relForError}`, { path: relForError });
+  }
+  if (stat.size > maxBytes) {
+    const hint = limitHint ? ` (raise ${limitHint})` : "";
+    throw new ToolError(
+      "too_large",
+      `File is ${stat.size} bytes, exceeding the ${maxBytes}-byte limit${hint}: ${relForError}`,
+      { path: relForError, size: stat.size, limit: maxBytes },
+    );
+  }
+  return fs.readFile(target);
+}
+
 export async function mapLimit<T, R>(
   items: T[],
   limit: number,

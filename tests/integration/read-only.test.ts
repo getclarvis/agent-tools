@@ -1,11 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { selectSurface, tools } from "../../src/tools/registry.js";
 import { dispatch } from "../../src/core.js";
-import { makeWorkspace, cleanup, makeConfig, callTool, write, read } from "../helpers/fixtures.js";
+import {
+  makeWorkspace,
+  cleanup,
+  makeConfig,
+  callTool,
+  write,
+  read,
+  resultText,
+} from "../helpers/fixtures.js";
 import type { ServerConfig } from "../../src/config.js";
 
-const READ_TOOLS = ["glob", "grep", "list_dir", "read_file"];
-const HIDDEN_TOOLS = ["apply_patch", "bash", "edit_file", "multi_edit", "write_file"];
+const READ_TOOLS = ["glob", "grep", "list_dir", "read_file", "read_image"];
+const HIDDEN_TOOLS = [
+  "apply_patch",
+  "bash",
+  "edit_file",
+  "monitor_list",
+  "monitor_poll",
+  "monitor_start",
+  "monitor_stop",
+  "multi_edit",
+  "write_file",
+];
 
 describe("read-only surface", () => {
   let root: string;
@@ -19,7 +37,7 @@ describe("read-only surface", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("advertises exactly the four non-mutating tools", () => {
+  it("advertises exactly the five non-mutating tools", () => {
     expect(
       selectSurface(true)
         .map((t) => t.name)
@@ -27,32 +45,32 @@ describe("read-only surface", () => {
     ).toEqual(READ_TOOLS);
   });
 
-  it("the five mutating/exec tools are absent from the read-only surface", () => {
+  it("the nine mutating/exec tools are absent from the read-only surface", () => {
     const names = new Set(selectSurface(true).map((t) => t.name));
     for (const hidden of HIDDEN_TOOLS) {
       expect(names.has(hidden), hidden).toBe(false);
     }
   });
 
-  it("the full (default) surface still advertises all nine", () => {
+  it("the full (default) surface still advertises all fourteen", () => {
     expect(selectSurface(false)).toBe(tools);
-    expect(selectSurface(false).length).toBe(9);
+    expect(selectSurface(false).length).toBe(14);
   });
 
   it("a hidden tool and an unknown name are indistinguishable not_found errors", async () => {
     const bogus = await dispatch("does_not_exist", {}, ro);
     expect(bogus.isError).toBe(true);
-    const bogusErr = JSON.parse(bogus.text) as { error: string };
+    const bogusErr = JSON.parse(resultText(bogus.content)) as { error: string };
     expect(bogusErr.error).toBe("not_found");
     for (const hidden of HIDDEN_TOOLS) {
       const res = await dispatch(hidden, {}, ro);
       expect(res.isError, hidden).toBe(true);
-      const err = JSON.parse(res.text) as { error: string };
+      const err = JSON.parse(resultText(res.content)) as { error: string };
       expect(err.error, hidden).toBe(bogusErr.error);
     }
   });
 
-  it("the four read tools behave identically full vs read-only", async () => {
+  it("the text read tools behave identically full vs read-only", async () => {
     write(root, "a.txt", "alpha\nbeta\ngamma\n");
     write(root, "sub/b.ts", "export const x = 1;\n");
     const cases: Array<[string, Record<string, unknown>]> = [

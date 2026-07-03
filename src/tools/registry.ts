@@ -1,4 +1,5 @@
 import { readFile } from "./read-file.js";
+import { readImage } from "./read-image.js";
 import { writeFile } from "./write-file.js";
 import { editFile } from "./edit-file.js";
 import { multiEdit } from "./multi-edit.js";
@@ -7,10 +8,12 @@ import { listDir } from "./list-dir.js";
 import { globTool } from "./glob.js";
 import { grep } from "./grep.js";
 import { bash } from "./bash.js";
+import { monitorStart, monitorPoll, monitorStop, monitorList } from "./monitor.js";
 import type { ToolDef } from "./types.js";
 
 export const tools: ToolDef[] = [
   readFile,
+  readImage,
   writeFile,
   editFile,
   multiEdit,
@@ -19,9 +22,13 @@ export const tools: ToolDef[] = [
   globTool,
   grep,
   bash,
+  monitorStart,
+  monitorPoll,
+  monitorStop,
+  monitorList,
 ];
 
-export const readOnlyTools: ToolDef[] = [readFile, listDir, globTool, grep];
+export const readOnlyTools: ToolDef[] = [readFile, readImage, listDir, globTool, grep];
 
 export function selectSurface(readOnly: boolean): ToolDef[] {
   return readOnly ? readOnlyTools : tools;
