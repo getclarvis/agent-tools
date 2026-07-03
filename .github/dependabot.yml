@@ -5,6 +5,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    # Supply-chain guard: hold a freshly published version before bumping to it, so a
+    # compromised release (npm attack windows run hours) is pulled before Dependabot proposes it.
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     groups:
       dev-tooling:
         dependency-type: development

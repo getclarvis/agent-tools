@@ -40,7 +40,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # --ignore-scripts blocks dependency install/postinstall hooks (supply-chain dropper vector);
+        # VitePress builds fine without them.
+        run: npm ci --ignore-scripts
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
