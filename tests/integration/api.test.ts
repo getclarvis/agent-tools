@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createAgentTools } from "../../src/index.js";
-import { makeWorkspace, cleanup, write } from "../helpers/fixtures.js";
+import { makeWorkspace, cleanup, write, resultText } from "../helpers/fixtures.js";
 
 const FULL = [
   "apply_patch",
@@ -9,8 +9,13 @@ const FULL = [
   "glob",
   "grep",
   "list_dir",
+  "monitor_list",
+  "monitor_poll",
+  "monitor_start",
+  "monitor_stop",
   "multi_edit",
   "read_file",
+  "read_image",
   "write_file",
 ];
 
@@ -21,7 +26,7 @@ describe("createAgentTools (library API)", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("lists the nine tools and exposes the resolved config", () => {
+  it("lists the fourteen tools and exposes the resolved config", () => {
     const t = createAgentTools({ workspaceRoot: root, probeRipgrep: () => false });
     expect(t.config.workspaceRoot).toBe(root);
     expect(t.config.ripgrepAvailable).toBe(false);
@@ -39,15 +44,15 @@ describe("createAgentTools (library API)", () => {
 
     const r = await t.callTool("read_file", { path: "a.txt" });
     expect(r.isError).toBe(false);
-    expect(r.text).toContain("alpha");
+    expect(resultText(r.content)).toContain("alpha");
 
     const g = await t.callTool("grep", { pattern: "beta" });
     expect(g.isError).toBe(false);
-    expect(g.text).toContain("a.txt");
+    expect(resultText(g.content)).toContain("a.txt");
 
     const b = await t.callTool("bash", { command: "echo hi" });
     expect(b.isError).toBe(false);
-    expect(JSON.parse(b.text)).toMatchObject({ exit_code: 0 });
+    expect(JSON.parse(resultText(b.content))).toMatchObject({ exit_code: 0 });
   });
 
   it("read-only mode hides mutating tools and blocks writes", async () => {
@@ -57,18 +62,18 @@ describe("createAgentTools (library API)", () => {
         .listTools()
         .map((x) => x.name)
         .sort(),
-    ).toEqual(["glob", "grep", "list_dir", "read_file"]);
+    ).toEqual(["glob", "grep", "list_dir", "read_file", "read_image"]);
 
     const w = await t.callTool("write_file", { path: "x.txt", content: "nope" });
     expect(w.isError).toBe(true);
-    expect(JSON.parse(w.text)).toMatchObject({ error: "not_found" });
+    expect(JSON.parse(resultText(w.content))).toMatchObject({ error: "not_found" });
   });
 
   it("returns a not_found tool error for an unknown tool", async () => {
     const t = createAgentTools({ workspaceRoot: root, probeRipgrep: () => false });
     const r = await t.callTool("does_not_exist", {});
     expect(r.isError).toBe(true);
-    expect(JSON.parse(r.text)).toMatchObject({ error: "not_found" });
+    expect(JSON.parse(resultText(r.content))).toMatchObject({ error: "not_found" });
   });
 
   it("defaults callTool args to an empty object", async () => {
@@ -91,6 +96,6 @@ describe("createAgentTools (library API)", () => {
     write(root, "a.txt", "alpha\n");
     const r = await t.callTool("grep", Object.freeze({ pattern: "alpha" }));
     expect(r.isError).toBe(false);
-    expect(r.text).toContain("a.txt");
+    expect(resultText(r.content)).toContain("a.txt");
   });
 });

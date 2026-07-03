@@ -1,12 +1,14 @@
 # The tools
 
-> The nine tools, their inputs, outputs, and error codes. Four are read-only; five mutate. In
-> [read-only mode](/guide/read-only-mode) only the read tools are registered. This mirrors the
-> canonical [`SPEC.md`](https://github.com/getclarvis/agent-tools/blob/main/SPEC.md) in the repo.
+> The fourteen tools, their inputs, outputs, and error codes. Five are available in read-only mode;
+> the other nine require the full surface. In [read-only mode](/guide/read-only-mode) only the read
+> tools are registered. This mirrors the canonical
+> [`SPEC.md`](https://github.com/getclarvis/agent-tools/blob/main/SPEC.md) in the repo.
 
 | Tool                          | Mutating | Summary                                                            |
 | ----------------------------- | -------- | ------------------------------------------------------------------ |
 | [`read_file`](#read_file)     | no       | Read a text file (UTF-8/UTF-16), with line numbers, paging, tail.  |
+| [`read_image`](#read_image)   | no       | Read an image (PNG/JPEG/GIF/WebP) as a base64 image part.          |
 | [`list_dir`](#list_dir)       | no       | List the entries of a directory.                                   |
 | [`glob`](#glob)               | no       | Find files by glob, most-recently-modified first.                  |
 | [`grep`](#grep)               | no       | Search file contents by regular expression (optionally multiline). |
@@ -15,9 +17,14 @@
 | [`multi_edit`](#multi_edit)   | yes      | Apply several `edit_file`-style edits to one file atomically.      |
 | [`apply_patch`](#apply_patch) | yes      | Apply a unified diff (modify/create/delete/rename) atomically.     |
 | [`bash`](#bash)               | yes      | Run a shell command (`sh -c`) and capture stdout/stderr/exit.      |
+| [`monitor_start`](#monitor_start) | yes  | Start a background command (dev server, watcher); return an id, optionally waiting until ready. |
+| [`monitor_poll`](#monitor_poll)   | yes  | Read a monitor's new output since a byte offset; report running state and exit code.            |
+| [`monitor_stop`](#monitor_stop)   | yes  | Stop a monitor (SIGTERM→SIGKILL) and remove its files.                                          |
+| [`monitor_list`](#monitor_list)   | yes  | List running and finished monitors.                                                             |
 
-Every failure is a JSON [error envelope](/reference/error-codes). Success is plain text for every
-tool **except `bash`**, whose success result is a JSON object.
+Every failure is a JSON [error envelope](/reference/error-codes). Success is plain text for most
+tools; `bash` and the `monitor_*` tools return a JSON object, and `read_image` returns a base64 image
+part.
 
 ## read_file
 
@@ -36,6 +43,22 @@ hint with the next `offset` is appended.
 
 **Errors.** `not_found`, `not_a_file`, `is_binary`, `too_large`, `path_escape`, `invalid_input`
 (offset `0`, or a positive offset past EOF).
+
+## read_image
+
+Read an image file and return it as an image part so a vision-capable model can view it. Produces no
+text part.
+
+| Input  | Type   | Required | Default | Notes          |
+| ------ | ------ | -------- | ------- | -------------- |
+| `path` | string | yes      | —       | Image to read. |
+
+**Output.** A single image part `{ type: "image", data, mimeType }` where `data` is base64. The format
+is detected from the file's magic bytes; PNG, JPEG, GIF, and WebP are supported. The source is confined
+to the workspace and refused if larger than `maxImageBytes` (default 5 MB).
+
+**Errors.** `not_found`, `not_a_file` (directory), `not_an_image` (unrecognized format), `too_large`
+(larger than `maxImageBytes`), `path_escape`.
 
 ## list_dir
 
@@ -180,6 +203,83 @@ is written to a `.clarvis/` spill file referenced in the result (see [Limits & s
 **Errors.** `timeout` (process group killed; partial output returned), `output_limit` (a hard
 per-stream in-memory ceiling was hit and the command was killed), `not_found` / `not_a_file` (bad
 `cwd`), `path_escape` (`cwd` outside the workspace), `io_error` (spawn failure).
+
+## monitor_start
+
+Standardized background-process monitors. `bash` blocks until a command exits; a **monitor** is its
+complement for a command that doesn't — a dev server, `tail -f`, a watcher. No state is held
+in-process: each call re-derives the truth from the `.clarvis/monitor-<id>.{json,log,exit}` sidecars
+and the live OS process, so monitors are as stateless as the file tools.
+
+`monitor_start` launches a command in the background and returns its id immediately, optionally
+blocking until the output signals it is ready.
+
+| Input              | Type    | Required | Default        | Notes                                                                                          |
+| ------------------ | ------- | -------- | -------------- | ---------------------------------------------------------------------------------------------- |
+| `command`          | string  | yes      | —              | Shell command, run via `sh -c`. Do **not** append a trailing `&` — the monitor backgrounds it. |
+| `cwd`              | string  | no       | workspace root | Working directory.                                                                             |
+| `ready_when`       | string  | no       | —              | Regex; when set, the call blocks until the combined output matches it (see below).             |
+| `ready_timeout_ms` | integer | no       | `30000`        | Max wait for `ready_when` (`monitorReadyTimeoutMs`). Ignored unless `ready_when` is set.        |
+
+**Output.** Returns immediately with `{ id, running, ready, output, next_offset }`. The command's
+combined stdout+stderr is appended to `.clarvis/monitor-<id>.log`. When `ready_when` is given the call
+**blocks** until the log matches it — or until `ready_timeout_ms` elapses, or the process exits — and
+`ready` reports whether the match was seen (`null` when no `ready_when` was given). `ready_when` is
+tested against the first `maxOutputBytes` of output, so a marker printed only after that much startup
+chatter is not detected. At most `maxMonitors` (default 32) live monitors may exist at once.
+
+**Errors.** `too_many_monitors` (`maxMonitors` reached), `invalid_input` (bad `ready_when` regex),
+`not_found` / `not_a_file` (bad `cwd`), `path_escape` (`cwd` outside the workspace), `io_error` (spawn
+failure).
+
+## monitor_poll
+
+Read new output from a monitor since a byte offset.
+
+| Input    | Type    | Required | Default | Notes                                                                  |
+| -------- | ------- | -------- | ------- | ---------------------------------------------------------------------- |
+| `id`     | string  | yes      | —       | The monitor id from `monitor_start`.                                   |
+| `offset` | integer | no       | `0`     | Byte offset to read from; pass back the previous poll's `next_offset`. |
+| `match`  | string  | no       | —       | Regex; keep only matching lines.                                       |
+
+**Output.** `{ running, output, next_offset, exit_code }` — pass `next_offset` back to page forward.
+`exit_code` is the command's **natural** exit code once it has exited on its own: `null` while
+running, and `null` if the monitor was stopped or killed. Output is bounded to `maxOutputBytes`; while
+the process is still running and `match` is not set, a partial trailing line is held back so a line is
+not split across polls (with `match`, or when the byte cap truncates the slice, a line may span two
+polls).
+
+**Errors.** `monitor_not_found` (unknown `id`), `invalid_input` (bad `match` regex).
+
+## monitor_stop
+
+Stop a monitor and remove its files.
+
+| Input | Type   | Required | Notes                                |
+| ----- | ------ | -------- | ------------------------------------ |
+| `id`  | string | yes      | The monitor id from `monitor_start`. |
+
+**Output.** `{ stopped, id }`. Signals the monitor's whole process group (SIGTERM, then SIGKILL after
+a short grace) and removes its sidecars. Idempotent for an already-exited monitor — it just cleans up.
+
+**Errors.** `monitor_not_found` (unknown `id`).
+
+## monitor_list
+
+List every monitor, running and finished. Takes no arguments.
+
+**Output.** `{ monitors: [ { id, command, running, started_at, cwd } ] }`, newest first. Use it to
+find and stop leaked monitors.
+
+**Errors.** None specific to this tool.
+
+**Reaping & leaks.** A monitor's process **outlives the tool call** and survives host exit, so a
+forgotten monitor leaks (the same exec exposure as `bash`, not a sandbox).
+`sweepMonitors(workspaceRoot)` — the companion to `sweepSpillDir` — removes the sidecars of monitors
+whose process has exited and leaves live ones untouched; call it at session start. `exit_code` is
+captured for a **natural** exit only: a command that `exec`s away or is killed leaves `exit_code`
+null. See [Limits & spill](/guide/limits-and-spill) and
+[Core API → `sweepMonitors`](/reference/core-api#sweepmonitors).
 
 ## See also
 

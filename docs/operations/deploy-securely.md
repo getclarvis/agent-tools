@@ -44,11 +44,14 @@ long-lived or multi-tenant deployment:
   expect.
 - Set a **`bashTimeoutMs`** / **`bashTimeoutMaxMs`** that fits your longest legitimate build or test,
   and no more — a runaway command is killed at the ceiling.
-- **Sweep spill files.** `bash` overflow is written under `.clarvis/`. Call `sweepSpillDir(root)`
-  periodically (startup, or on a timer) so old spill files don't accumulate.
+- **Sweep spill files and reap monitors.** `bash` overflow is written under `.clarvis/`, and the
+  background `monitor_*` tools write `.clarvis/monitor-<id>.*` sidecars whose process outlives the
+  call. Call `sweepSpillDir(root)` and `sweepMonitors(root)` periodically (startup, or on a timer) so
+  old spill files and the sidecars of exited monitors don't accumulate — and use `monitor_list` /
+  `monitor_stop` to stop any leaked monitor still running.
 
 ```ts
-import { createAgentTools, sweepSpillDir } from "@clarvis/agent-tools";
+import { createAgentTools, sweepSpillDir, sweepMonitors } from "@clarvis/agent-tools";
 
 const root = "/srv/project";
 const tools = createAgentTools({
@@ -59,7 +62,8 @@ const tools = createAgentTools({
   bashTimeoutMaxMs: 300000,
 });
 
-setInterval(() => void sweepSpillDir(root), 60 * 60 * 1000); // hourly cleanup
+setInterval(() => void sweepSpillDir(root), 60 * 60 * 1000); // hourly spill cleanup
+setInterval(() => void sweepMonitors(root), 60 * 60 * 1000); // reap exited monitors
 ```
 
 ## Checklist
@@ -69,7 +73,7 @@ setInterval(() => void sweepSpillDir(root), 60 * 60 * 1000); // hourly cleanup
 - [ ] `readOnly` on where writes and shell aren't needed
 - [ ] No unnecessary secrets in the process environment
 - [ ] `maxOutputBytes` / `maxFileBytes` / `bash` timeouts tuned for the workload
-- [ ] Spill files swept on a schedule
+- [ ] Spill files swept and exited monitors reaped on a schedule
 
 ## See also
 

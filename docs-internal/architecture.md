@@ -46,8 +46,8 @@ control flow around Node's `fs`/`child_process`.
   cross-cutting: errors (ToolError · serializeError · ErrorCode)
 ```
 
-`@clarvis/agent-tools` is **transport-agnostic**: it carries no transport and no agent loop. The MCP
-face, the CLI, the loop — all of that is the caller's. See the published
+`@clarvis/agent-tools` is **transport-agnostic**: it carries no transport and no agent loop. The
+transport face, the CLI, the loop — all of that is the caller's. See the published
 [how it works](https://agent-tools.clarvis.dev/explanation/how-it-works).
 
 ## Entry and config

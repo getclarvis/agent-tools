@@ -19,7 +19,7 @@
 └───────────────┬─────────────────────────────────────────────┘
                 │  handler(args, config)
                 ▼
-      the tool registry (9 ToolDefs)
+      the tool registry (14 ToolDefs)
                 │
                 ▼
       the workspace  (fs · child_process · ripgrep?)
@@ -39,7 +39,7 @@ global state. A bad config fails fast, synchronously, with a `StartupError`. See
 
 ## The surface
 
-`selectSurface(config.readOnly)` decides which tools exist: all nine, or just the four read tools in
+`selectSurface(config.readOnly)` decides which tools exist: all fourteen, or just the five read tools in
 [read-only mode](/guide/read-only-mode). Both `listTools` (what you advertise) and `dispatch` (what
 you can call) go through it, so the advertised surface and the callable surface are always the same
 set — there is no separate allow-list.

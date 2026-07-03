@@ -6,14 +6,17 @@ security model, see [README.md](./README.md).
 
 ## Conventions
 
-- **Return value.** Each tool call returns `{ isError, text }`. On success
-  `text` is the tool's output; on failure `isError` is set and `text` is a JSON
-  error object (see [Errors](#errors)).
-- **Result format.** On success every tool returns plain text **except `bash`**,
-  whose success result is a JSON object (`exit_code`, `stdout`, `stderr`,
-  `signal`, `timed_out`); a non-zero exit is a success (`isError` false), not an
-  error. Only spawn/timeout/output-limit failures of `bash` flag `isError`. All
-  failures, for every tool, are the JSON error object above.
+- **Return value.** Each tool call returns `{ isError, content }`, where `content` is
+  an array of parts: a text part `{ type: "text", text }` or an image part
+  `{ type: "image", data, mimeType }` (`data` is base64). On failure `isError` is set
+  and `content` is a single text part holding a JSON error object (see [Errors](#errors)).
+- **Result format.** On success most tools return one text part. `bash` returns a
+  single text part holding a JSON object (`exit_code`, `stdout`, `stderr`, `signal`,
+  `timed_out`); a non-zero exit is a success (`isError` false), not an error. Only
+  spawn/timeout/output-limit failures of `bash` flag `isError`. `read_image` returns
+  one image part. The `monitor_*` tools each return one text part holding a JSON
+  object. All failures, for every tool, are a text part with the JSON error
+  object above.
 - **Paths.** A path is resolved verbatim if absolute, otherwise against the
   workspace root. By default the result is **confined to the workspace root**:
   `../` traversal, absolute paths outside the root, and symlinks that resolve
@@ -24,7 +27,8 @@ security model, see [README.md](./README.md).
 - **Input size.** The file-reading tools (`read_file`, `edit_file`, `multi_edit`,
   `apply_patch`, and the in-process `grep` backend) refuse a file larger than
   `MAX_FILE_BYTES` (default 20000000): the read/edit tools fail with `too_large`,
-  and `grep` skips the oversized file.
+  and `grep` skips the oversized file. `read_image` refuses a file larger than
+  `MAX_IMAGE_BYTES` (default 5000000) with `too_large`.
 - **Text & encoding.** Text tools operate on UTF-8. A UTF-16 file with a BOM (LE/BE)
   is decoded by `read_file`, but the editing tools refuse it (`is_binary`) rather than
   rewrite it as UTF-8. Other binary files (NUL byte in the first/last 8 KB, no UTF-16
@@ -34,8 +38,9 @@ security model, see [README.md](./README.md).
   **preserve each untouched line's original terminator** (`\r\n`, `\n`, or lone
   `\r`); newly inserted or edited lines use the file's dominant terminator. A
   leading UTF-8 BOM is preserved.
-- **Output bounding.** Every result is capped to `MAX_OUTPUT_BYTES` (default
-  131072), truncated on a UTF-8 boundary with a trailing marker.
+- **Output bounding.** Every text part is capped to `MAX_OUTPUT_BYTES` (default
+  131072), truncated on a UTF-8 boundary with a trailing marker. Image parts are not
+  text-bounded; `read_image` instead refuses a source larger than `MAX_IMAGE_BYTES`.
 - **Atomicity.** All mutations write to a temp file and `rename` into place;
   multi-file operations (`apply_patch`) are staged and committed transactionally
   with rollback (a rename/move participates with both its source and destination). Writes to the same path are serialized by an in-process lock —
@@ -47,8 +52,8 @@ security model, see [README.md](./README.md).
 
 ## Read-only surface
 
-In `--read-only` mode only `read_file`, `list_dir`, `glob`, and `grep` are
-exposed; the mutating tools are not registered.
+In `--read-only` mode only `read_file`, `read_image`, `list_dir`, `glob`, and `grep`
+are exposed; the mutating tools are not registered.
 
 ---
 
@@ -69,6 +74,20 @@ with the next `offset` is appended.
 
 **Errors:** `not_found`, `not_a_file` (directory), `is_binary`, `too_large`,
 `path_escape`, `invalid_input` (offset 0, or a positive offset past EOF).
+
+## read_image
+
+Read an image file and return it as an image part so a vision-capable model can view it.
+
+**Input:** `path` (string, required).
+
+**Behavior:** Reads the file's bytes (confined to the workspace, subject to
+`MAX_IMAGE_BYTES`) and returns a single image part `{ type: "image", data, mimeType }`
+where `data` is base64. The format is detected from the file's magic bytes; PNG, JPEG,
+GIF, and WebP are supported. Produces no text part.
+
+**Errors:** `not_found`, `not_a_file` (directory), `not_an_image` (unrecognized
+format), `too_large` (larger than `MAX_IMAGE_BYTES`), `path_escape`.
 
 ## list_dir
 
@@ -239,8 +258,63 @@ per-stream in-memory ceiling: a command producing unbounded output is killed
 On timeout the process group is killed and `timeout` is returned (with the
 partial stdout/stderr).
 
-**Errors:** `timeout`, `output_limit`, `not_found`/`not_a_file` (bad `cwd`),
-`path_escape` (`cwd` outside the workspace), `io_error` (spawn failure).
+**Errors:** `timeout`, `aborted` (cancelled via the dispatch `AbortSignal`),
+`output_limit`, `not_found`/`not_a_file` (bad `cwd`), `path_escape` (`cwd` outside
+the workspace), `io_error` (spawn failure).
+
+---
+
+## monitor_start / monitor_poll / monitor_stop / monitor_list
+
+Standardized background-process monitors. `bash` blocks until a command exits; a
+monitor is its complement for a command that does not — a dev server, `tail -f`, a
+watcher. A monitor holds no state in-process: each call re-derives the truth from
+`.clarvis/monitor-<id>.{json,log,exit}` sidecars and the live OS process, so it is
+as stateless as the file tools.
+
+**monitor_start** — Launch `command` (string, required) via `sh -c` in the
+background, its combined stdout+stderr appended to `.clarvis/monitor-<id>.log`.
+`cwd` (string, default workspace root). Returns immediately with
+`{ id, running, ready, output, next_offset }`. If `ready_when` (a regex) is given
+the call **blocks** until the log matches it — or until `ready_timeout_ms` (default
+`MONITOR_READY_TIMEOUT_MS` = 30000) elapses, or the process exits — and `ready`
+reports whether the match was seen (`null` when no `ready_when` was given).
+`ready_when` is tested against the first `MAX_OUTPUT_BYTES` of output, so a marker
+printed only after that much startup chatter is not detected. Do
+**not** background inside the command (a trailing `&`): the monitor backgrounds it
+for you, and a stray `&` makes the id track the wrong process. At most
+`MAX_MONITORS` (default 32) live monitors may exist at once; beyond that
+`monitor_start` fails with `too_many_monitors`.
+
+**monitor_poll** — Read new output from monitor `id` (string, required) since a
+byte `offset` (integer ≥ 0, default 0). Returns
+`{ running, output, next_offset, exit_code }`: pass `next_offset` back to page
+forward. `match` (a regex) keeps only matching lines. `exit_code` is the command's
+natural exit code once it has exited on its own — `null` while running, and `null`
+if the monitor was stopped or killed. Output is bounded to `MAX_OUTPUT_BYTES`; while
+the process is still running and `match` is not set, a partial trailing line is held
+back so a line is not split across polls. (With `match`, or when the byte cap
+truncates the slice, a line may span two polls.)
+
+**monitor_stop** — Stop monitor `id` (string, required): signal its process group
+(SIGTERM, then SIGKILL after a short grace) and remove its sidecars. Idempotent —
+stopping an already-exited monitor just cleans up. Returns `{ stopped, id }`.
+
+**monitor_list** — Return
+`{ monitors: [ { id, command, running, started_at, cwd } ] }` for every monitor
+(running and finished), newest first. Use it to find and stop leaked monitors.
+
+**Errors:** `monitor_not_found` (unknown `id`), `too_many_monitors` (`MAX_MONITORS`
+reached), `invalid_input` (bad `ready_when`/`match` regex), `not_found`/`not_a_file`
+(bad `cwd`), `path_escape` (`cwd` outside the workspace), `io_error` (spawn
+failure).
+
+**Reaping.** A monitor's process outlives the call and survives host exit, so a
+forgotten monitor leaks (the same exec exposure as `bash`, not a sandbox).
+`sweepMonitors(workspaceRoot)` (companion to `sweepSpillDir`) removes the sidecars
+of monitors whose process has exited, leaving live ones untouched — call it at
+session start. `exit_code` is captured for a natural exit only; a command that
+`exec`s away or is killed leaves `exit_code` null.
 
 ---
 
@@ -255,12 +329,16 @@ The codes are:
 | `not_found`       | Path does not exist.                                       |
 | `not_a_file`      | Path was a directory where a file was expected (or vice). |
 | `is_binary`       | File appears to be binary; text tools refuse it.          |
+| `not_an_image`    | File is not a supported image format (`read_image`).      |
 | `no_match`        | `edit_file`/`multi_edit` could not find `old_string`.     |
 | `ambiguous_match` | `old_string` matched more than once without `replace_all`.|
 | `patch_failed`    | A patch hunk did not apply cleanly.                       |
 | `timeout`         | `bash` command exceeded its timeout.                      |
+| `aborted`         | `bash` run cancelled via the dispatch `AbortSignal`.      |
 | `output_limit`    | `bash` output exceeded the hard capture ceiling.          |
 | `too_large`       | Input file exceeded `MAX_FILE_BYTES`.                     |
 | `path_escape`     | Path resolved outside the confined workspace root.        |
+| `monitor_not_found` | No monitor with the given id (`monitor_poll`/`stop`).   |
+| `too_many_monitors` | `monitor_start` would exceed `MAX_MONITORS` live monitors.|
 | `io_error`        | An underlying filesystem/process error.                   |
 | `internal`        | Unexpected internal error.                                |

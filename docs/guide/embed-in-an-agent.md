@@ -11,7 +11,7 @@ An agent loop with these tools is one repeated cycle:
 1. **Advertise** — send `tools.listTools()` to the model as its tool/function schema.
 2. **Model call** — the model replies with text and/or tool calls.
 3. **Dispatch** — for each tool call, run `tools.callTool(name, args)`.
-4. **Feed back** — attach each `{ isError, text }` to the conversation as a tool result.
+4. **Feed back** — attach each `{ isError, content }` to the conversation as a tool result.
 5. **Repeat** until the model stops calling tools (or you hit your own budget).
 
 ```text
@@ -47,6 +47,8 @@ When the model returns tool calls, dispatch each and turn the result into a tool
 result's `isError` maps to whatever "this tool call failed" flag your model API uses:
 
 ```ts
+import { contentText } from "@clarvis/agent-tools";
+
 async function runToolCalls(calls: { id: string; name: string; args: Record<string, unknown> }[]) {
   return Promise.all(
     calls.map(async (call) => {
@@ -54,22 +56,27 @@ async function runToolCalls(calls: { id: string; name: string; args: Record<stri
       return {
         tool_call_id: call.id,
         is_error: res.isError,
-        content: res.text, // feed back verbatim — it is already byte-bounded
+        content: contentText(res.content), // flatten text parts — already byte-bounded
       };
     }),
   );
 }
 ```
 
+`res.content` is an array of parts — text parts (`{ type: "text", text }`) and, for `read_image`,
+an image part (`{ type: "image", data, mimeType }`). `contentText(content)` concatenates the text
+parts; to pass an image to a vision model, forward the image part in whatever shape your API expects
+instead of flattening.
+
 A few things to know when you feed results back:
 
-- **`text` is already bounded.** On success it is capped to `maxOutputBytes` on a UTF-8 boundary,
-  with a truncation marker if it was cut. You do not need to trim it again. See
+- **The text parts are already bounded.** On success each is capped to `maxOutputBytes` on a UTF-8
+  boundary, with a truncation marker if it was cut. You do not need to trim it again. See
   [Limits & spill](/guide/limits-and-spill).
-- **`bash` returns JSON.** Its success `text` is `{ exit_code, stdout, stderr, signal, timed_out }`.
+- **`bash` returns JSON.** Its success text part is `{ exit_code, stdout, stderr, signal, timed_out }`.
   A non-zero `exit_code` is **not** an error (`isError` is `false`) — surface it to the model as-is
   so it can react to a failed build or test.
-- **Errors are self-describing.** On failure, `text` is a JSON envelope
+- **Errors are self-describing.** On failure, `content` is a single text part holding a JSON envelope
   `{ "error": "<code>", "message": "…" }`. Passing it straight back lets the model correct itself
   (e.g. fix an `ambiguous_match` by adding more context to `old_string`).
 

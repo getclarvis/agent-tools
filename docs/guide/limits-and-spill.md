@@ -38,6 +38,23 @@ await sweepSpillDir(process.cwd()); // async; removes stale .clarvis spill files
 
 Run it periodically (e.g. at startup, or on a timer) if your process is long-lived.
 
+## Background monitors leak too
+
+The [`monitor_*` tools](/reference/tools#monitor_start) run a command in the **background**, so — like
+a backgrounded `bash` process — the process outlives the tool call and survives host exit. Each
+monitor writes its own `.clarvis/` sidecars (`monitor-<id>.log`, `monitor-<id>.json`, and, on exit,
+`monitor-<id>.exit`). A forgotten monitor is a leak. `sweepMonitors` is the companion reaper to
+`sweepSpillDir`:
+
+```ts
+import { sweepMonitors } from "@clarvis/agent-tools";
+
+await sweepMonitors(process.cwd()); // removes sidecars of exited monitors; leaves live ones running
+```
+
+Call it at session start alongside `sweepSpillDir`, and use `monitor_list` / `monitor_stop` to find
+and stop any monitor still running.
+
 ## Input bounding
 
 The file-reading tools refuse a file larger than `maxFileBytes` (default **20000000** = 20 MB):

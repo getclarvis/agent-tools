@@ -178,6 +178,19 @@ describe("config", () => {
       expect(cfg.maxOutputBytes).toBe(4096);
     });
 
+    it("defaults maxImageBytes and accepts a MAX_IMAGE_BYTES override", () => {
+      const def = buildConfig(["--workspace", root], {}, noProbe);
+      expect(def.maxImageBytes).toBe(5_000_000);
+      const cfg = buildConfig(["--workspace", root], { MAX_IMAGE_BYTES: "1048576" }, noProbe);
+      expect(cfg.maxImageBytes).toBe(1048576);
+    });
+
+    it("rejects a MAX_IMAGE_BYTES below the minimum", () => {
+      expect(() => buildConfig(["--workspace", root], { MAX_IMAGE_BYTES: "1" }, noProbe)).toThrow(
+        StartupError,
+      );
+    });
+
     it("defaults the bash timeout and its ceiling", () => {
       const cfg = buildConfig(["--workspace", root], {}, noProbe);
       expect(cfg.bashTimeoutMs).toBe(120000);
@@ -203,6 +216,28 @@ describe("config", () => {
         ),
       ).toThrow(StartupError);
     });
+
+    it("defaults the monitor readiness timeout and monitor cap", () => {
+      const cfg = buildConfig(["--workspace", root], {}, noProbe);
+      expect(cfg.monitorReadyTimeoutMs).toBe(30000);
+      expect(cfg.maxMonitors).toBe(32);
+    });
+
+    it("parses MONITOR_READY_TIMEOUT_MS and MAX_MONITORS overrides", () => {
+      const cfg = buildConfig(
+        ["--workspace", root],
+        { MONITOR_READY_TIMEOUT_MS: "5000", MAX_MONITORS: "4" },
+        noProbe,
+      );
+      expect(cfg.monitorReadyTimeoutMs).toBe(5000);
+      expect(cfg.maxMonitors).toBe(4);
+    });
+
+    it("rejects a non-positive MAX_MONITORS", () => {
+      expect(() => buildConfig(["--workspace", root], { MAX_MONITORS: "0" }, noProbe)).toThrow(
+        StartupError,
+      );
+    });
   });
 
   describe("resolveConfig (programmatic options)", () => {
@@ -225,6 +260,12 @@ describe("config", () => {
           bashTimeoutMs: Number.MAX_SAFE_INTEGER + 1,
           probeRipgrep: noProbe,
         }),
+      ).toThrow(StartupError);
+    });
+
+    it("rejects a maxMonitors below one", () => {
+      expect(() =>
+        resolveConfig({ workspaceRoot: root, maxMonitors: 0, probeRipgrep: noProbe }),
       ).toThrow(StartupError);
     });
   });

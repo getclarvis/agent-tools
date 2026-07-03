@@ -4,7 +4,7 @@ const repo = "https://github.com/getclarvis/agent-tools";
 const site = "https://agent-tools.clarvis.dev";
 
 const description =
-  "A minimal, opinionated set of coding tools — read/search/edit/patch/bash — for driving an LLM agent over a workspace. Transport-agnostic, embeddable as a plain library.";
+  "A minimal, opinionated set of coding tools — read/search/edit/patch/bash/monitor — for driving an LLM agent over a workspace. Transport-agnostic, embeddable as a plain library.";
 
 // Shared sidebar groups — referenced from every per-section sidebar so the mode-agnostic pages
 // (reference, concepts, operations) live as single files but appear in each sidebar.

@@ -11,12 +11,15 @@
 | Option               | Type              | Default             | Meaning                                                                                          |
 | -------------------- | ----------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
 | `workspaceRoot`      | `string`          | — (required)        | Base directory; relative tool paths resolve against it. Must be an existing directory.           |
-| `readOnly`           | `boolean`         | `false`             | Expose only the non-mutating tools (`read_file` / `list_dir` / `glob` / `grep`).                 |
+| `readOnly`           | `boolean`         | `false`             | Expose only the non-mutating tools (`read_file` / `read_image` / `list_dir` / `glob` / `grep`).  |
 | `confineToWorkspace` | `boolean`         | `true`              | Reject paths that escape the workspace root (`path_escape`). `false` restores unrestricted paths.|
 | `maxOutputBytes`     | `number`          | `131072` (128 KB)   | Per-result output cap in UTF-8 bytes. Floor `1024`.                                              |
 | `maxFileBytes`       | `number`          | `20000000` (20 MB)  | Max size of an input file the text tools read; larger is rejected. Floor `1024`.                |
+| `maxImageBytes`      | `number`          | `5000000` (5 MB)    | Max size of an image `read_image` will load; larger is rejected. Floor `1024`.                  |
 | `bashTimeoutMs`      | `number`          | `120000` (2 min)    | Default `bash` timeout in milliseconds. Floor `1`.                                              |
 | `bashTimeoutMaxMs`   | `number`          | `600000` (10 min)   | Hard ceiling a `bash` `timeout_ms` request may reach; must be ≥ `bashTimeoutMs`. Requests clamp.|
+| `monitorReadyTimeoutMs` | `number`       | `30000` (30 s)      | Default time `monitor_start` waits for `ready_when` before returning. Floor `1`.                |
+| `maxMonitors`        | `number`          | `32`                | Max live background monitors at once; beyond it `monitor_start` fails with `too_many_monitors`. Floor `1`. |
 | `probeRipgrep`       | `() => boolean`   | probes `rg`         | Override ripgrep detection — e.g. `() => false` to force the in-process `grep` backend in tests.|
 
 ```ts
@@ -54,8 +57,11 @@ interface ServerConfig {
   workspaceRoot: string;
   maxOutputBytes: number;
   maxFileBytes: number;
+  maxImageBytes: number;
   bashTimeoutMs: number;
   bashTimeoutMaxMs: number;
+  monitorReadyTimeoutMs: number;
+  maxMonitors: number;
   ripgrepAvailable: boolean; // whether `rg` was detected
   readOnly: boolean;
   confineToWorkspace: boolean;
@@ -84,8 +90,11 @@ It parses the sources below, then delegates to `resolveConfig`.
 | `confineToWorkspace` | `--allow-outside-workspace`   | `ALLOW_OUTSIDE_WORKSPACE` | Flag/env **disable** confinement (`true` ⇒ not confined).    |
 | `maxOutputBytes`     | —                             | `MAX_OUTPUT_BYTES`        | Positive integer ≥ 1024.                                     |
 | `maxFileBytes`       | —                             | `MAX_FILE_BYTES`          | Positive integer ≥ 1024.                                     |
+| `maxImageBytes`      | —                             | `MAX_IMAGE_BYTES`         | Positive integer ≥ 1024.                                     |
 | `bashTimeoutMs`      | —                             | `BASH_TIMEOUT_MS`         | Positive integer.                                            |
 | `bashTimeoutMaxMs`   | —                             | `BASH_TIMEOUT_MAX_MS`     | Positive integer; must be ≥ `BASH_TIMEOUT_MS`.               |
+| `monitorReadyTimeoutMs` | —                          | `MONITOR_READY_TIMEOUT_MS`| Positive integer.                                            |
+| `maxMonitors`        | —                             | `MAX_MONITORS`            | Positive integer.                                            |
 
 A malformed value (a non-integer limit, an unrecognized boolean, `--workspace` with no argument)
 throws a `StartupError` with a message naming the offending setting.

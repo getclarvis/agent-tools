@@ -3,6 +3,7 @@ import type { ValidateFunction } from "ajv";
 import { ToolError, serializeError } from "./errors.js";
 import { bound } from "./lib/output.js";
 import { tools, getTool, selectSurface } from "./tools/registry.js";
+import { textPart, type ContentPart } from "./tools/content.js";
 import type { ServerConfig } from "./config.js";
 
 interface AjvInstance {
@@ -24,7 +25,20 @@ for (const tool of tools) {
 
 export interface DispatchResult {
   isError: boolean;
-  text: string;
+  content: ContentPart[];
+}
+
+function errorResult(err: unknown): DispatchResult {
+  return { isError: true, content: [textPart(serializeError(err))] };
+}
+
+function boundParts(
+  parts: ContentPart[],
+  bounded: boolean | undefined,
+  maxOutputBytes: number,
+): ContentPart[] {
+  if (bounded) return parts;
+  return parts.map((p) => (p.type === "text" ? textPart(bound(p.text, maxOutputBytes)) : p));
 }
 
 export interface ToolInfo {
@@ -49,26 +63,21 @@ export async function dispatch(
 ): Promise<DispatchResult> {
   const tool = getTool(name, selectSurface(config.readOnly));
   if (!tool) {
-    return {
-      isError: true,
-      text: serializeError(new ToolError("not_found", `Unknown tool: ${name}`)),
-    };
+    return errorResult(new ToolError("not_found", `Unknown tool: ${name}`));
   }
 
   const validate = validators.get(name)!;
   const filled = structuredClone(args);
   if (!validate(filled)) {
     const detail = ajv.errorsText(validate.errors, { separator: "; " });
-    return {
-      isError: true,
-      text: serializeError(new ToolError("invalid_input", detail || "invalid arguments")),
-    };
+    return errorResult(new ToolError("invalid_input", detail || "invalid arguments"));
   }
 
   try {
-    const text = await tool.handler(filled, config, signal);
-    return { isError: false, text: tool.bounded ? text : bound(text, config.maxOutputBytes) };
+    const out = await tool.handler(filled, config, signal);
+    const parts = typeof out === "string" ? [textPart(out)] : out;
+    return { isError: false, content: boundParts(parts, tool.bounded, config.maxOutputBytes) };
   } catch (err) {
-    return { isError: true, text: serializeError(err) };
+    return errorResult(err);
   }
 }

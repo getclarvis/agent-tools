@@ -1,6 +1,6 @@
 # Getting started
 
-> `@clarvis/agent-tools` is a transport-agnostic library that gives an LLM agent nine coding tools
+> `@clarvis/agent-tools` is a transport-agnostic library that gives an LLM agent fourteen coding tools
 > over a workspace. You give it a workspace root; it gives you a validated, bounded, workspace-confined
 > surface you can advertise to a model and call. This page takes you from install to a first read and
 > a first edit.
@@ -24,15 +24,16 @@ that all relative tool paths resolve against — and it resolves a config, then 
 tools.
 
 ```ts
-import { createAgentTools } from "@clarvis/agent-tools";
+import { createAgentTools, contentText } from "@clarvis/agent-tools";
 
 const tools = createAgentTools({ workspaceRoot: process.cwd() });
 
 // The surface to advertise to your model: name / description / JSON Schema per tool.
 const surface = tools.listTools();
 console.log(surface.map((t) => t.name));
-// [ 'read_file', 'list_dir', 'glob', 'grep',
-//   'write_file', 'edit_file', 'multi_edit', 'apply_patch', 'bash' ]
+// [ 'read_file', 'read_image', 'list_dir', 'glob', 'grep',
+//   'write_file', 'edit_file', 'multi_edit', 'apply_patch', 'bash',
+//   'monitor_start', 'monitor_poll', 'monitor_stop', 'monitor_list' ]
 ```
 
 Each entry of `listTools()` is `{ name, description, inputSchema }`, where `inputSchema` is a JSON
@@ -47,21 +48,23 @@ Schema you can hand straight to a model's tool-use / function-calling API.
 const res = await tools.callTool("read_file", { path: "package.json" });
 
 if (res.isError) {
-  const err = JSON.parse(res.text) as { error: string; message: string };
+  const err = JSON.parse(contentText(res.content)) as { error: string; message: string };
   console.error(err.error, err.message);
 } else {
-  console.log(res.text); // file contents, line-numbered and byte-bounded
+  console.log(contentText(res.content)); // file contents, line-numbered and byte-bounded
 }
 ```
 
 ## The result contract
 
-`callTool` **never throws** for tool-level problems — it always resolves to `{ isError, text }`:
+`callTool` **never throws** for tool-level problems — it always resolves to `{ isError, content }`,
+an array of content parts (`contentText(content)` concatenates the text parts):
 
-- **On success** (`isError: false`), `text` is the tool's output, already bounded to
-  `maxOutputBytes`. It is plain text for every tool **except `bash`**, whose success `text` is a JSON
-  object (`{ exit_code, stdout, stderr, signal, timed_out }`) — a non-zero exit is still a success.
-- **On failure** (`isError: true`), `text` is a JSON **error envelope**:
+- **On success** (`isError: false`), most tools return one text part, already bounded to
+  `maxOutputBytes`. `bash`'s text part is a JSON object (`{ exit_code, stdout, stderr, signal,
+  timed_out }`) — a non-zero exit is still a success — and `read_image` returns a single image part
+  (`{ type: "image", data, mimeType }`).
+- **On failure** (`isError: true`), `content` is a single text part holding a JSON **error envelope**:
   `{ "error": "<code>", "message": "…", …fields }`. An unknown tool name — or a mutating tool while
   in [read-only mode](/guide/read-only-mode) — comes back as an `isError` result with code
   `not_found`.
@@ -84,7 +87,7 @@ const edit = await tools.callTool("edit_file", {
   old_string: "world",
   new_string: "agent-tools",
 });
-console.log(edit.text); // "Replaced 1 occurrence …"
+console.log(contentText(edit.content)); // "Replaced 1 occurrence …"
 ```
 
 `edit_file` matches `old_string` **literally and exactly** first; only when an exact match fails does

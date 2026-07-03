@@ -1,6 +1,6 @@
 # Read-only mode
 
-> Set `readOnly: true` and the tool surface shrinks to the four non-mutating tools. The mutating
+> Set `readOnly: true` and the tool surface shrinks to the five non-mutating tools. The mutating
 > tools and `bash` are not registered at all — a model literally cannot call them.
 
 ## What it exposes
@@ -11,11 +11,12 @@ import { createAgentTools } from "@clarvis/agent-tools";
 const tools = createAgentTools({ workspaceRoot: process.cwd(), readOnly: true });
 
 console.log(tools.listTools().map((t) => t.name));
-// [ 'read_file', 'list_dir', 'glob', 'grep' ]
+// [ 'read_file', 'read_image', 'list_dir', 'glob', 'grep' ]
 ```
 
-In read-only mode only **`read_file`**, **`list_dir`**, **`glob`**, and **`grep`** are exposed.
-`write_file`, `edit_file`, `multi_edit`, `apply_patch`, and `bash` are dropped from the surface.
+In read-only mode only **`read_file`**, **`read_image`**, **`list_dir`**, **`glob`**, and **`grep`**
+are exposed. `write_file`, `edit_file`, `multi_edit`, `apply_patch`, `bash`, and the four `monitor_*`
+tools are dropped from the surface.
 
 ## How a blocked call behaves
 
@@ -24,9 +25,11 @@ treats them as unknown — a call comes back as an error result with code `not_f
 error:
 
 ```ts
+import { contentText } from "@clarvis/agent-tools";
+
 const res = await tools.callTool("write_file", { path: "x", content: "y" });
 res.isError; // true
-JSON.parse(res.text).error; // "not_found"
+JSON.parse(contentText(res.content)).error; // "not_found"
 ```
 
 This is deliberate: the read-only surface is defined by what is *registered*, so there is a single
