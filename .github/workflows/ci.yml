@@ -27,7 +27,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # --ignore-scripts blocks dependency install/postinstall hooks, the vector npm
+        # supply-chain droppers run (e.g. the axios / plain-crypto-js compromise). The lockfile
+        # is authoritative; no first-party dependency here needs an install script to build or test.
+        run: npm ci --ignore-scripts
 
       # ripgrep must be present so the grep ripgrep/in-process parity suite runs
       # (tests/integration/grep-parity.test.ts guards on this in CI).
