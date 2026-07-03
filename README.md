@@ -185,10 +185,11 @@ The canonical per-tool contract (inputs, behavior, error codes) is
 ```sh
 npm run build         # tsc -> dist/ (emits .d.ts)
 npm test              # vitest (contract + integration)
+npm run test:coverage # vitest + 95% coverage gate
 npm run typecheck
 npm run lint
 npm run format:check
-npm run pre-commit    # typecheck + format:check + test
+npm run pre-commit    # typecheck + format:check + test:coverage
 ```
 
 ## Contributing

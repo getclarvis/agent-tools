@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { makeWorkspace, cleanup, makeConfig, callTool, write } from "../helpers/fixtures.js";
+import {
+  makeWorkspace,
+  cleanup,
+  makeConfig,
+  callTool,
+  write,
+  writeBinary,
+  chmod,
+  isRoot,
+} from "../helpers/fixtures.js";
 import type { ServerConfig } from "../../src/config.js";
 
 const rgAvailable = (() => {
@@ -123,6 +132,130 @@ describe("grep (in-process)", () => {
   });
 });
 
+describe("grep single-file target pre-scan (in-process)", () => {
+  let root: string;
+  let config: ServerConfig;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+    config = makeConfig(root, { ripgrepAvailable: false });
+  });
+  afterEach(() => cleanup(root));
+
+  it("returns no matches for a binary file target", async () => {
+    writeBinary(root, "blob.bin");
+    const r = await callTool(
+      "grep",
+      { pattern: "a", path: "blob.bin", output_mode: "content" },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("(no matches)");
+  });
+
+  it("searches a text file target", async () => {
+    write(root, "hello.txt", "needle here\nother\n");
+    const r = await callTool(
+      "grep",
+      { pattern: "needle", path: "hello.txt", output_mode: "content" },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("hello.txt:1:needle here");
+  });
+
+  it("skips a file target larger than maxFileBytes", async () => {
+    write(root, "big.txt", `needle ${"a".repeat(4096)}\n`);
+    const small = makeConfig(root, { ripgrepAvailable: false, maxFileBytes: 1024 });
+    const r = await callTool(
+      "grep",
+      { pattern: "needle", path: "big.txt", output_mode: "content" },
+      small,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("(no matches)");
+  });
+
+  it.skipIf(isRoot)("swallows a read error on the file target and yields no matches", async () => {
+    write(root, "locked.txt", "needle here\n");
+    chmod(root, "locked.txt", 0o000);
+    const r = await callTool(
+      "grep",
+      { pattern: "needle", path: "locked.txt", output_mode: "content" },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("(no matches)");
+    chmod(root, "locked.txt", 0o600);
+  });
+});
+
+describe("grep across multiple files (in-process)", () => {
+  let root: string;
+  let config: ServerConfig;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+    config = makeConfig(root, { ripgrepAvailable: false });
+  });
+  afterEach(() => cleanup(root));
+
+  it("tallies matches per file and lists files in sorted order", async () => {
+    write(root, "a.txt", "foo\nfoo\n");
+    write(root, "b.txt", "foo\n");
+
+    const r = await callTool("grep", { pattern: "foo", output_mode: "count" }, config);
+
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("a.txt:2\nb.txt:1");
+    expect(r.text).not.toContain("(no matches)");
+  });
+
+  it("paginates per-file counts with head_limit and footers the remainder", async () => {
+    write(root, "a.txt", "hit\n");
+    write(root, "b.txt", "hit\n");
+    write(root, "c.txt", "hit\n");
+
+    const r = await callTool(
+      "grep",
+      { pattern: "hit", output_mode: "count", head_limit: 2 },
+      config,
+    );
+
+    expect(r.isError).toBe(false);
+    expect(r.text.split("\n").slice(0, 2)).toEqual(["a.txt:1", "b.txt:1"]);
+    expect(r.text).toContain("showing 0..2 of 3");
+    expect(r.text).toContain("offset=2");
+  });
+
+  it("content mode with context inserts a -- separator when the file changes", async () => {
+    write(root, "a.txt", "pre\nMATCH\npost\n");
+    write(root, "b.txt", "before\nMATCH\nafter\n");
+
+    const r = await callTool(
+      "grep",
+      { pattern: "MATCH", output_mode: "content", context: 1 },
+      config,
+    );
+
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe(
+      [
+        "a.txt-1-pre",
+        "a.txt:2:MATCH",
+        "a.txt-3-post",
+        "--",
+        "b.txt-1-before",
+        "b.txt:2:MATCH",
+        "b.txt-3-after",
+      ].join("\n"),
+    );
+    expect(r.text.split("\n").filter((l) => l === "--")).toHaveLength(1);
+    expect(r.text.startsWith("--")).toBe(false);
+    expect(r.text.endsWith("--")).toBe(false);
+  });
+});
+
 describe("grep asymmetric context and pagination (in-process)", () => {
   let root: string;
   let config: ServerConfig;
@@ -190,6 +323,24 @@ describe("grep asymmetric context and pagination (in-process)", () => {
     expect(a.text).toBe(b.text);
   });
 
+  it("emits a bare single-line match when no context is requested", async () => {
+    write(root, "p.txt", "one\nneedle\nthree\n");
+    const r = await callTool("grep", { pattern: "needle", output_mode: "content" }, config);
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("p.txt:2:needle");
+  });
+
+  it("surrounds a single-line match with symmetric context", async () => {
+    write(root, "c.txt", "l1\nl2\nneedle\nl4\nl5\n");
+    const r = await callTool(
+      "grep",
+      { pattern: "needle", output_mode: "content", context: 1 },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("c.txt-2-l2\nc.txt:3:needle\nc.txt-4-l4");
+  });
+
   it("head_limit caps content matches and footers the remainder", async () => {
     write(root, "many.txt", Array.from({ length: 5 }, (_, i) => `hit ${i}`).join("\n") + "\n");
     const r = await callTool(
@@ -247,6 +398,65 @@ describe("grep asymmetric context and pagination (in-process)", () => {
     write(root, "one.txt", "foo\n");
     const r = await callTool("grep", { pattern: "foo", head_limit: 0 }, config);
     expect(r.json.error).toBe("invalid_input");
+  });
+});
+
+describe("grep byte-cap page limits (in-process)", () => {
+  let root: string;
+  let config: ServerConfig;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+    config = makeConfig(root, { ripgrepAvailable: false, maxOutputBytes: 300 });
+  });
+  afterEach(() => cleanup(root));
+
+  it("warns the page was cut when the full result set overflows the byte cap without truncating the scan", async () => {
+    const lines = Array.from({ length: 120 }, () => "x").join("\n") + "\n";
+    write(root, "f.txt", lines);
+
+    const r = await callTool("grep", { pattern: "x", output_mode: "content" }, config);
+
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("[... page exceeded 300 bytes and was cut");
+    expect(r.text).toContain("set or reduce head_limit to page in smaller chunks");
+    expect(r.text).not.toContain("[... search incomplete");
+    expect(r.text).not.toContain("call again with offset");
+  });
+
+  it("still warns 'page exceeded' when head_limit is set but the page itself is too big", async () => {
+    const lines = Array.from({ length: 120 }, () => "y").join("\n") + "\n";
+    write(root, "big.txt", lines);
+
+    const r = await callTool(
+      "grep",
+      { pattern: "y", output_mode: "content", head_limit: 100 },
+      config,
+    );
+
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("[... page exceeded 300 bytes and was cut");
+    expect(r.text).not.toContain("[... search incomplete");
+    expect(r.text).not.toContain("call again with offset");
+  });
+
+  it("does NOT warn when the page fits: a byte-bounded page under the cap returns cleanly", async () => {
+    write(root, "small.txt", "hit\n");
+
+    const r = await callTool("grep", { pattern: "hit", output_mode: "content" }, config);
+
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("small.txt:1:hit");
+    expect(r.text).not.toContain("[... page exceeded");
+  });
+
+  it("stops scanning further files once the byte budget is exhausted", async () => {
+    const tiny = makeConfig(root, { ripgrepAvailable: false, maxOutputBytes: 1 });
+    write(root, "a.txt", "needle here\n");
+    write(root, "b.txt", "needle also\n");
+    const r = await callTool("grep", { pattern: "needle", output_mode: "content" }, tiny);
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("search incomplete");
   });
 });
 
@@ -358,6 +568,75 @@ describe("grep multiline (in-process)", () => {
     expect(r.text).toContain("ml.txt:1:A\nB");
     expect(r.text).toContain("showing 0..1 of 2");
     expect(r.text).toContain("offset=1");
+  });
+
+  it("matches case-insensitively across a line boundary (multiline + ignore_case)", async () => {
+    write(root, "ml.txt", "ALPHA\nBETA\ngamma\n");
+    const r = await callTool(
+      "grep",
+      { pattern: "alpha\\nbeta", output_mode: "content", multiline: true, ignore_case: true },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("ml.txt:1:ALPHA\nBETA");
+  });
+
+  it("ignores a zero-width multiline match", async () => {
+    write(root, "z.txt", "abc\ndef\n");
+    const r = await callTool(
+      "grep",
+      { pattern: "q*", output_mode: "content", multiline: true },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("(no matches)");
+  });
+
+  it("clamps before-context at the first line and still emits after-context for a multi-line match", async () => {
+    write(root, "m1.txt", "ALPHA\nBETA\ntail\n");
+    const r = await callTool(
+      "grep",
+      {
+        pattern: "ALPHA\\nBETA",
+        output_mode: "content",
+        multiline: true,
+        before_context: 1,
+        after_context: 1,
+      },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("m1.txt:1:ALPHA\nBETA");
+    expect(r.text).toContain("m1.txt-3-tail");
+  });
+
+  it("clamps after-context at the last line and still emits before-context for a multi-line match", async () => {
+    write(root, "m2.txt", "head\nALPHA\nBETA\n");
+    const r = await callTool(
+      "grep",
+      {
+        pattern: "ALPHA\\nBETA",
+        output_mode: "content",
+        multiline: true,
+        before_context: 1,
+        after_context: 1,
+      },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("m2.txt-1-head");
+    expect(r.text).toContain("m2.txt:2:ALPHA\nBETA");
+  });
+
+  it("reports a dotall match spanning three lines as a single block", async () => {
+    write(root, "span.txt", "START x\nmid\ny END\n");
+    const r = await callTool(
+      "grep",
+      { pattern: "START.*END", output_mode: "content", multiline: true },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("span.txt:1:START x\nmid\ny END");
   });
 
   it("rejects a non-boolean multiline with invalid_input", async () => {

@@ -1,8 +1,34 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { utimesSync } from "node:fs";
 import path from "node:path";
-import { makeWorkspace, cleanup, makeConfig, callTool, write } from "../helpers/fixtures.js";
+import {
+  makeWorkspace,
+  cleanup,
+  makeConfig,
+  callTool,
+  write,
+  chmod,
+  isRoot,
+} from "../helpers/fixtures.js";
 import type { ServerConfig } from "../../src/config.js";
+
+const mockState = vi.hoisted(() => ({ throwInListFiles: false }));
+
+type ListFilesFn = (
+  base: string,
+  workspaceRoot: string,
+  opts: { pattern: string; respectGitignore: boolean },
+) => Promise<string[]>;
+
+vi.mock("../../src/lib/files.js", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  const realListFiles = actual.listFiles as ListFilesFn;
+  const listFiles: ListFilesFn = async (base, workspaceRoot, opts) => {
+    if (mockState.throwInListFiles) throw new Error("simulated tinyglob failure");
+    return realListFiles(base, workspaceRoot, opts);
+  };
+  return { ...actual, listFiles };
+});
 
 describe("glob", () => {
   let root: string;
@@ -11,8 +37,12 @@ describe("glob", () => {
   beforeEach(() => {
     root = makeWorkspace();
     config = makeConfig(root);
+    mockState.throwInListFiles = false;
   });
-  afterEach(() => cleanup(root));
+  afterEach(() => {
+    mockState.throwInListFiles = false;
+    cleanup(root);
+  });
 
   it("returns matches sorted by mtime (most recent first)", async () => {
     write(root, "old.ts", "a");
@@ -21,6 +51,19 @@ describe("glob", () => {
     utimesSync(path.join(root, "new.ts"), new Date(2000), new Date(2000));
     const r = await callTool("glob", { pattern: "**/*.ts" }, config);
     expect(r.text).toBe("new.ts\nold.ts");
+  });
+
+  it("breaks mtime ties by path in ascending order", async () => {
+    write(root, "c.ts", "1");
+    write(root, "a.ts", "2");
+    write(root, "b.ts", "3");
+    const same = new Date(1_700_000_000_000);
+    for (const name of ["a.ts", "b.ts", "c.ts"]) {
+      utimesSync(path.join(root, name), same, same);
+    }
+    const r = await callTool("glob", { pattern: "**/*.ts", respect_gitignore: false }, config);
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("a.ts\nb.ts\nc.ts");
   });
 
   it("excludes .gitignore'd files by default", async () => {
@@ -47,6 +90,21 @@ describe("glob", () => {
     expect(r.text).toBe("(no matches)");
   });
 
+  it.skipIf(isRoot)(
+    "drops files whose metadata cannot be read, yielding (no matches)",
+    async () => {
+      write(root, "sub/a.ts", "x");
+      chmod(root, "sub", 0o444);
+      try {
+        const r = await callTool("glob", { pattern: "sub/*.ts", respect_gitignore: false }, config);
+        expect(r.isError).toBe(false);
+        expect(r.text).toBe("(no matches)");
+      } finally {
+        chmod(root, "sub", 0o755);
+      }
+    },
+  );
+
   it("errors not_found for a missing base path", async () => {
     const r = await callTool("glob", { pattern: "*", path: "nope" }, config);
     expect(r.json.error).toBe("not_found");
@@ -55,5 +113,18 @@ describe("glob", () => {
   it("rejects out-of-schema input with invalid_input", async () => {
     const r = await callTool("glob", { pattern: "*", bogus: 1 }, config);
     expect(r.json.error).toBe("invalid_input");
+  });
+
+  it("surfaces a failed file listing as invalid_input", async () => {
+    write(root, "a.ts", "x");
+    mockState.throwInListFiles = true;
+    try {
+      const r = await callTool("glob", { pattern: "**/*.ts" }, config);
+      expect(r.isError).toBe(true);
+      expect(r.json.error).toBe("invalid_input");
+      expect(r.json.message).toContain("simulated tinyglob failure");
+    } finally {
+      mockState.throwInListFiles = false;
+    }
   });
 });

@@ -29,6 +29,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
@@ -36,7 +37,7 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "pre-commit": "npm run typecheck && npm run format:check && npm test",
+    "pre-commit": "npm run typecheck && npm run format:check && npm run test:coverage",
     "prepublishOnly": "test -f README.md && test -f SPEC.md && npm run build && npm test"
   },
   "dependencies": {
@@ -50,6 +51,7 @@
     "@types/node": "^26.1.0",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.62.1",
+    "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^10.6.0",
     "prettier": "^3.9.4",
     "typescript": "^6.0.3",

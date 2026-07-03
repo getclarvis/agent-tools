@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { decodeText, reencode } from "../../src/lib/text.js";
+import { decodeText, encodeText, reencode } from "../../src/lib/text.js";
+
+const BOM = "﻿";
 
 function roundtrip(s: string): string {
   const decoded = decodeText(Buffer.from(s, "utf8"));
@@ -73,5 +75,71 @@ describe("text encoding detection", () => {
     const decoded = decodeText(Buffer.from("﻿hello\n", "utf8"));
     expect(decoded.encoding).toBe("utf8");
     expect(decoded.bom).toBe(true);
+  });
+});
+
+describe("text encode (EOL and BOM)", () => {
+  it("rewrites LF to CRLF when eol=crlf", () => {
+    expect(encodeText("a\nb\nc\n", { eol: "crlf", bom: false })).toBe("a\r\nb\r\nc\r\n");
+  });
+
+  it("normalizes CRLF input then re-emits CRLF when eol=crlf", () => {
+    expect(encodeText("a\r\nb\r\n", { eol: "crlf", bom: false })).toBe("a\r\nb\r\n");
+  });
+
+  it("prepends a BOM and emits CRLF when eol=crlf and bom=true", () => {
+    expect(encodeText("a\nb\n", { eol: "crlf", bom: true })).toBe(BOM + "a\r\nb\r\n");
+  });
+
+  it("leaves LF intact when eol=lf and bom=false", () => {
+    expect(encodeText("a\r\nb\r\n", { eol: "lf", bom: false })).toBe("a\nb\n");
+  });
+
+  it("prepends a BOM but keeps LF when eol=lf and bom=true", () => {
+    expect(encodeText("a\nb\n", { eol: "lf", bom: true })).toBe(BOM + "a\nb\n");
+  });
+});
+
+describe("text reencode (per-line ending preservation)", () => {
+  it("assigns the dominant ending to an inserted line", () => {
+    const decoded = decodeText(Buffer.from("a\r\nb\r\n", "utf8"));
+    expect(reencode("a\nNEW\nb\n", decoded)).toBe("a\r\nNEW\r\nb\r\n");
+  });
+
+  it("drops a removed line while keeping the surviving endings", () => {
+    const decoded = decodeText(Buffer.from("a\r\nb\r\nc\r\n", "utf8"));
+    expect(reencode("a\nc\n", decoded)).toBe("a\r\nc\r\n");
+  });
+
+  it("maps each surviving line back to its original per-line ending", () => {
+    const decoded = decodeText(Buffer.from("a\r\nb\ngamma\r\n", "utf8"));
+    expect(reencode("a\nb\ngamma\n", decoded)).toBe("a\r\nb\ngamma\r\n");
+  });
+
+  it("returns empty output for empty new content", () => {
+    const decoded = decodeText(Buffer.from("a\nb\n", "utf8"));
+    expect(reencode("", decoded)).toBe("");
+  });
+
+  it("re-applies the BOM around remapped content", () => {
+    const decoded = decodeText(Buffer.from(BOM + "a\r\nb\n", "utf8"));
+    expect(decoded.bom).toBe(true);
+    expect(reencode(decoded.content, decoded)).toBe(BOM + "a\r\nb\n");
+  });
+
+  it("omits the BOM when the source had none", () => {
+    const decoded = decodeText(Buffer.from("a\nb\n", "utf8"));
+    expect(decoded.bom).toBe(false);
+    expect(reencode(decoded.content, decoded)).toBe("a\nb\n");
+  });
+
+  it("keeps a final line that has no trailing newline", () => {
+    const decoded = decodeText(Buffer.from("a\nb", "utf8"));
+    expect(reencode("a\nb", decoded)).toBe("a\nb");
+  });
+
+  it("uses the dominant ending for an insertion into a lone-CR file", () => {
+    const decoded = decodeText(Buffer.from("a\rb\r", "utf8"));
+    expect(reencode("a\rINS\rb\r", decoded)).toBe("a\rINS\rb\r");
   });
 });
