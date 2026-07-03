@@ -19,7 +19,8 @@ npm run lint         # eslint src + tests
 | `npm run typecheck` | `tsc -p tsconfig.json --noEmit` (strict, `noUncheckedIndexedAccess`). |
 | `npm run lint` | ESLint over `src/**/*.ts` and `tests/**/*.ts`. |
 | `npm run format` / `format:check` | Prettier write / check over `src` + `tests`. |
-| `npm run pre-commit` | `typecheck && format:check && test` — the local quality gate. |
+| `npm run test:coverage` | `vitest run --coverage` — the suite plus the 95% coverage gate (v8 provider). |
+| `npm run pre-commit` | `typecheck && format:check && test:coverage` — the local quality gate. |
 | `npm run prepublishOnly` | Guards publishing: asserts `README.md` + `SPEC.md` exist, then `build && test`. |
 
 Run the gate before pushing:
@@ -29,9 +30,9 @@ npm run pre-commit   # typecheck && format:check && test
 ```
 
 CI ([.github/workflows/ci.yml](https://github.com/getclarvis/agent-tools/blob/main/.github/workflows/ci.yml))
-runs `typecheck`, `lint`, `format:check`, `test`, and `build` on pushes and PRs to `main` and
+runs `typecheck`, `lint`, `format:check`, `test:coverage`, and `build` on pushes and PRs to `main` and
 `develop`, across a Node matrix (`20.x`, `lts/*`, `current`; `20` is the supported floor per
-`engines`). There is no separate coverage gate.
+`engines`). `test:coverage` enforces a 95% gate on lines, statements, functions, and branches.
 
 ## Docs
 

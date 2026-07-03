@@ -1,23 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { findCascadeMatch, scanLineBlocks } from "../../src/lib/match-cascade.js";
 
-describe("scanLineBlocks (direct)", () => {
+describe("scanLineBlocks", () => {
   const eq = (a: string, b: string): boolean => a === b;
 
-  it("returns no hits when the needle is empty (need.length === 0)", () => {
-    expect(scanLineBlocks(["a", "b"], [], eq)).toEqual([]);
-  });
-
-  it("returns no hits when the needle is longer than the haystack", () => {
-    expect(scanLineBlocks(["a"], ["a", "b"], eq)).toEqual([]);
-  });
-
-  it("finds every window that matches (eq true and false arms)", () => {
+  it("finds every window that matches", () => {
     const hay = ["a", "x", "a", "b", "a", "b"];
     expect(scanLineBlocks(hay, ["a", "b"], eq)).toEqual([2, 4]);
   });
 
-  it("stops at the cap once enough blocks are collected (hits.length >= cap)", () => {
+  it("stops at the cap once enough blocks are collected", () => {
     const hay = ["m", "m", "m"];
     expect(scanLineBlocks(hay, ["m"], eq, 2)).toEqual([0, 1]);
   });
@@ -25,15 +17,35 @@ describe("scanLineBlocks (direct)", () => {
   it("returns an empty list when nothing matches", () => {
     expect(scanLineBlocks(["a", "b", "c"], ["z"], eq)).toEqual([]);
   });
+
+  it("returns no hits when the needle is empty", () => {
+    expect(scanLineBlocks(["a", "b"], [], eq)).toEqual([]);
+  });
+
+  it("returns no hits when the needle is longer than the haystack", () => {
+    expect(scanLineBlocks(["a"], ["a", "b"], eq)).toEqual([]);
+  });
+
+  it("treats a hole in the haystack window as an empty line", () => {
+    const hay: string[] = ["a"];
+    hay.length = 2;
+    expect(scanLineBlocks(hay, ["x"], eq)).toEqual([]);
+  });
+
+  it("treats a hole in the needle as an empty line", () => {
+    const need: string[] = ["a"];
+    need.length = 2;
+    expect(scanLineBlocks(["a", "b"], need, eq)).toEqual([]);
+  });
 });
 
-describe("findCascadeMatch (cascade + span math)", () => {
-  it("returns null for an empty old string (old === '')", () => {
+describe("findCascadeMatch", () => {
+  it("returns null for an empty old string", () => {
     expect(findCascadeMatch("anything here\n", "")).toBeNull();
     expect(findCascadeMatch("anything here\n", "\n")).toBeNull();
   });
 
-  it("matches a non-final line (endContent: k+1 < starts.length branch)", () => {
+  it("matches a non-final line", () => {
     const text = "foo\nbar";
     const r = findCascadeMatch(text, "foo");
     expect(r).not.toBeNull();
@@ -42,7 +54,7 @@ describe("findCascadeMatch (cascade + span math)", () => {
     expect(span).toEqual({ start: 0, end: 3 });
   });
 
-  it("matches the final line with no trailing newline (endContent: else -> textLen)", () => {
+  it("matches the final line with no trailing newline", () => {
     const text = "foo\nbar";
     const r = findCascadeMatch(text, "bar");
     expect(r).not.toBeNull();
@@ -51,7 +63,7 @@ describe("findCascadeMatch (cascade + span math)", () => {
     expect(text.slice(span.start, span.end)).toBe("bar");
   });
 
-  it("extends the span to include the trailing newline (blockSpan: oldEndsNL branch)", () => {
+  it("extends the span to include the trailing newline", () => {
     const text = "a\nb\nc\n";
     const r = findCascadeMatch(text, "a\nb\n");
     expect(r).not.toBeNull();
@@ -69,7 +81,7 @@ describe("findCascadeMatch (cascade + span math)", () => {
     expect(text.slice(span.start, span.end)).toBe("a\nb");
   });
 
-  it("returns null when old has more lines than the text (indentationFlexible: m > hay.length)", () => {
+  it("returns null when old has more lines than the text", () => {
     const r = findCascadeMatch("a\n", "a\nb\nc\nd\ne\nf");
     expect(r).toBeNull();
   });
@@ -99,7 +111,7 @@ describe("findCascadeMatch (cascade + span math)", () => {
     expect(text.slice(span.start, span.end)).toBe("foo");
   });
 
-  it("filters a length-disproportionate block (disproportionate: >= 500 char delta)", () => {
+  it("filters a length-disproportionate block", () => {
     const text = "a" + " ".repeat(600) + "b\n";
     const r = findCascadeMatch(text, "a b");
     expect(r).toBeNull();
@@ -119,21 +131,5 @@ describe("findCascadeMatch (cascade + span math)", () => {
     expect(r).not.toBeNull();
     expect(r!.spans.length).toBe(2);
     for (const s of r!.spans) expect(text.slice(s.start, s.end)).toBe("row");
-  });
-});
-
-describe("scanLineBlocks (defensive nullish fallbacks)", () => {
-  const eq = (a: string, b: string): boolean => a === b;
-
-  it("falls back to '' for a hole in the haystack window (hay[i + j] ?? '')", () => {
-    const hay: string[] = ["a"];
-    hay.length = 2;
-    expect(scanLineBlocks(hay, ["x"], eq)).toEqual([]);
-  });
-
-  it("falls back to '' for a hole in the needle (need[j] ?? '')", () => {
-    const need: string[] = ["a"];
-    need.length = 2;
-    expect(scanLineBlocks(["a", "b"], need, eq)).toEqual([]);
   });
 });

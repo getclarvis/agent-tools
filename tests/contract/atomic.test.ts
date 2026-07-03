@@ -32,17 +32,7 @@ describe("writeAtomic", () => {
     cleanup(root);
   });
 
-  it("cleans up the temp file and rethrows when the final rename fails (dir target)", async () => {
-    const dir = path.join(root, "adir");
-    mkdirSync(dir);
-
-    const err = (await catchErr(writeAtomic(dir, "payload"))) as NodeJS.ErrnoException;
-    expect(err).toBeInstanceOf(Error);
-    expect(err.code).toBe("EISDIR");
-    expect(tmpFiles(root)).toHaveLength(0);
-  });
-
-  it("swallows a directory-open failure during the post-rename fsync (fsyncDir open catch)", async () => {
+  it("still completes the write when the directory cannot be opened for the post-rename fsync", async () => {
     const realOpen = fsp.open.bind(fsp);
     vi.spyOn(fsp, "open").mockImplementation(((p: PathLike, flags?: string | number) => {
       if (flags === "r") {
@@ -55,7 +45,7 @@ describe("writeAtomic", () => {
     expect(read(root, "f-open.txt")).toBe("hello");
   });
 
-  it("swallows a directory fsync (dh.sync) failure during the post-rename fsync", async () => {
+  it("still completes the write when the post-rename directory fsync fails", async () => {
     const realOpen = fsp.open.bind(fsp);
     let closed = false;
     vi.spyOn(fsp, "open").mockImplementation(((p: PathLike, flags?: string | number) => {
@@ -75,9 +65,19 @@ describe("writeAtomic", () => {
     expect(read(root, "f-sync.txt")).toBe("world");
     expect(closed).toBe(true);
   });
+
+  it("cleans up the temp file and rethrows when the final rename fails", async () => {
+    const dir = path.join(root, "adir");
+    mkdirSync(dir);
+
+    const err = (await catchErr(writeAtomic(dir, "payload"))) as NodeJS.ErrnoException;
+    expect(err).toBeInstanceOf(Error);
+    expect(err.code).toBe("EISDIR");
+    expect(tmpFiles(root)).toHaveLength(0);
+  });
 });
 
-describe("applyOpsAtomic — validateTargets branches", () => {
+describe("applyOpsAtomic — committing operations", () => {
   let root: string;
 
   beforeEach(() => {
@@ -88,7 +88,42 @@ describe("applyOpsAtomic — validateTargets branches", () => {
     cleanup(root);
   });
 
-  it("throws not_found when a rename source does not exist (ENOENT)", async () => {
+  it("creates an empty file when a create op omits its content", async () => {
+    const newP = path.join(root, "fresh", "created.txt");
+    const ops: FileOp[] = [{ type: "create", path: newP }];
+    await expect(applyOpsAtomic(ops)).resolves.toBeUndefined();
+    expect(exists(root, "fresh/created.txt")).toBe(true);
+    expect(read(root, "fresh/created.txt")).toBe("");
+    expect(tmpFiles(root)).toHaveLength(0);
+  });
+
+  it("commits a content-rename followed by a delete of the moved file", async () => {
+    write(root, "Q.txt", "orig");
+    const Q = path.join(root, "Q.txt");
+    const P = path.join(root, "P.txt");
+    const ops: FileOp[] = [
+      { type: "rename", path: P, from: Q, content: "moved" },
+      { type: "delete", path: P },
+    ];
+    await expect(applyOpsAtomic(ops)).resolves.toBeUndefined();
+    expect(exists(root, "Q.txt")).toBe(false);
+    expect(exists(root, "P.txt")).toBe(false);
+    expect(tmpFiles(root)).toHaveLength(0);
+  });
+});
+
+describe("applyOpsAtomic — target validation", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    cleanup(root);
+  });
+
+  it("throws not_found when a rename source does not exist", async () => {
     const ops: FileOp[] = [
       { type: "rename", path: path.join(root, "dest.txt"), from: path.join(root, "missing.txt") },
     ];
@@ -98,7 +133,7 @@ describe("applyOpsAtomic — validateTargets branches", () => {
     expect(tmpFiles(root)).toHaveLength(0);
   });
 
-  it("rethrows a non-ENOENT stat error for the rename source (ENOTDIR)", async () => {
+  it("rethrows a non-ENOENT stat error for the rename source", async () => {
     write(root, "blocker", "x");
     const ops: FileOp[] = [
       {
@@ -123,7 +158,7 @@ describe("applyOpsAtomic — validateTargets branches", () => {
     expect(err.code).toBe("not_a_file");
   });
 
-  it("rethrows a non-ENOENT stat error for the rename destination (else throw)", async () => {
+  it("rethrows a non-ENOENT stat error for the rename destination", async () => {
     write(root, "src.txt", "hi");
     const toPath = path.join(root, "to.txt");
     const realStat = fsp.stat.bind(fsp);
@@ -141,7 +176,7 @@ describe("applyOpsAtomic — validateTargets branches", () => {
     expect(err).not.toBeInstanceOf(ToolError);
   });
 
-  it("throws not_a_file when a create/modify target is an existing directory", async () => {
+  it("throws not_a_file when a create or modify target is an existing directory", async () => {
     mkdirSync(path.join(root, "dir196"));
     const ops: FileOp[] = [{ type: "modify", path: path.join(root, "dir196"), content: "x" }];
     const err = (await catchErr(applyOpsAtomic(ops))) as ToolError;
@@ -149,9 +184,27 @@ describe("applyOpsAtomic — validateTargets branches", () => {
     expect(err.code).toBe("not_a_file");
     expect(tmpFiles(root)).toHaveLength(0);
   });
+
+  it("rethrows a non-ENOENT stat error for a create or modify target", async () => {
+    const target = path.join(root, "guarded.txt");
+    const realStat = fsp.stat.bind(fsp);
+    vi.spyOn(fsp, "stat").mockImplementation(((p: PathLike) => {
+      if (p === target) {
+        return Promise.reject(Object.assign(new Error("denied"), { code: "EACCES" }));
+      }
+      return (realStat as (pp: PathLike) => Promise<Stats>)(p);
+    }) as typeof fsp.stat);
+
+    const ops: FileOp[] = [{ type: "create", path: target, content: "x" }];
+    const err = (await catchErr(applyOpsAtomic(ops))) as NodeJS.ErrnoException;
+    expect(err).toBeInstanceOf(Error);
+    expect(err.code).toBe("EACCES");
+    expect(err).not.toBeInstanceOf(ToolError);
+    expect(tmpFiles(root)).toHaveLength(0);
+  });
 });
 
-describe("applyOpsAtomic — rollback of a committed pure rename", () => {
+describe("applyOpsAtomic — rollback", () => {
   let root: string;
 
   beforeEach(() => {
@@ -162,7 +215,7 @@ describe("applyOpsAtomic — rollback of a committed pure rename", () => {
     cleanup(root);
   });
 
-  it("undoes a committed pure rename (renamed branch) when a later op fails", async () => {
+  it("undoes a committed pure rename when a later op fails", async () => {
     write(root, "A.txt", "A-content");
     write(root, "C.txt", "C-content");
     const A = path.join(root, "A.txt");
@@ -221,47 +274,6 @@ describe("applyOpsAtomic — rollback of a committed pure rename", () => {
     expect(err.message).toContain(A);
   });
 
-  it('uses empty content and creates a new file when a create op omits content (content ?? "")', async () => {
-    const newP = path.join(root, "fresh", "created.txt");
-    const ops: FileOp[] = [{ type: "create", path: newP }];
-    await expect(applyOpsAtomic(ops)).resolves.toBeUndefined();
-    expect(exists(root, "fresh/created.txt")).toBe(true);
-    expect(read(root, "fresh/created.txt")).toBe("");
-    expect(tmpFiles(root)).toHaveLength(0);
-  });
-
-  it("rethrows a non-ENOENT stat error for a create/modify target (L191 throw arm)", async () => {
-    const target = path.join(root, "guarded.txt");
-    const realStat = fsp.stat.bind(fsp);
-    vi.spyOn(fsp, "stat").mockImplementation(((p: PathLike) => {
-      if (p === target) {
-        return Promise.reject(Object.assign(new Error("denied"), { code: "EACCES" }));
-      }
-      return (realStat as (pp: PathLike) => Promise<Stats>)(p);
-    }) as typeof fsp.stat);
-
-    const ops: FileOp[] = [{ type: "create", path: target, content: "x" }];
-    const err = (await catchErr(applyOpsAtomic(ops))) as NodeJS.ErrnoException;
-    expect(err).toBeInstanceOf(Error);
-    expect(err.code).toBe("EACCES");
-    expect(err).not.toBeInstanceOf(ToolError);
-    expect(tmpFiles(root)).toHaveLength(0);
-  });
-
-  it("skips chmod on a content-rename when the target mode is undefined (L222 false arm)", async () => {
-    write(root, "Q.txt", "orig");
-    const Q = path.join(root, "Q.txt");
-    const P = path.join(root, "P.txt");
-    const ops: FileOp[] = [
-      { type: "rename", path: P, from: Q, content: "moved" },
-      { type: "delete", path: P },
-    ];
-    await expect(applyOpsAtomic(ops)).resolves.toBeUndefined();
-    expect(exists(root, "Q.txt")).toBe(false);
-    expect(exists(root, "P.txt")).toBe(false);
-    expect(tmpFiles(root)).toHaveLength(0);
-  });
-
   it("rolls back a committed delete and a no-backup create when a later op fails", async () => {
     write(root, "D.txt", "D-content");
     write(root, "F.txt", "F-content");
@@ -295,7 +307,7 @@ describe("applyOpsAtomic — rollback of a committed pure rename", () => {
     expect(tmpFiles(root)).toHaveLength(0);
   });
 
-  it("rolls back a pure rename that fails during its own commit (renamed/fromBackup unset)", async () => {
+  it("rolls back a pure rename that fails during its own commit", async () => {
     write(root, "A.txt", "A-content");
     const A = path.join(root, "A.txt");
     const B = path.join(root, "B.txt");
@@ -317,7 +329,7 @@ describe("applyOpsAtomic — rollback of a committed pure rename", () => {
     expect(tmpFiles(root)).toHaveLength(0);
   });
 
-  it("reports the from-path when a content-rename (fromBackup branch) rollback fails", async () => {
+  it("reports the from-path when a content-rename rollback fails", async () => {
     write(root, "A.txt", "A-content");
     write(root, "C.txt", "C-content");
     const A = path.join(root, "A.txt");

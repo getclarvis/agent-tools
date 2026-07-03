@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { multiEdit } from "../../src/tools/multi-edit.js";
 import { makeWorkspace, cleanup, makeConfig, callTool, write, read } from "../helpers/fixtures.js";
 import type { ServerConfig } from "../../src/config.js";
 
@@ -92,5 +93,40 @@ describe("multi_edit", () => {
     expect(r.json.error).toBe("ambiguous_match");
     expect(r.json.index).toBe(1);
     expect(read(root, "f.txt")).toBe(original);
+  });
+});
+
+describe("multi_edit edge cases", () => {
+  let root: string;
+  let config: ServerConfig;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+    config = makeConfig(root);
+  });
+  afterEach(() => cleanup(root));
+
+  it("surfaces a TypeError when an edit entry is malformed", async () => {
+    write(root, "f.txt", "hello world");
+    await expect(multiEdit.handler({ path: "f.txt", edits: [null] }, config)).rejects.toThrow(
+      TypeError,
+    );
+  });
+
+  it("skips an undefined edit slot yet still counts it as applied", async () => {
+    write(root, "f.txt", "hello world");
+    const msg = await multiEdit.handler({ path: "f.txt", edits: [undefined] }, config);
+    expect(msg).toContain("Applied 1 edit to");
+    expect(read(root, "f.txt")).toBe("hello world");
+  });
+
+  it("continues past an undefined slot and still applies a later real edit", async () => {
+    write(root, "f.txt", "alpha beta");
+    const msg = await multiEdit.handler(
+      { path: "f.txt", edits: [undefined, { old_string: "beta", new_string: "gamma" }] },
+      config,
+    );
+    expect(msg).toContain("Applied 2 edits to");
+    expect(read(root, "f.txt")).toBe("alpha gamma");
   });
 });
