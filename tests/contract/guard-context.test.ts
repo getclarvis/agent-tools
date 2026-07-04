@@ -1,0 +1,93 @@
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { buildGuardContext } from "../../src/guard/context.js";
+import { makeWorkspace, cleanup, makeConfig } from "../helpers/fixtures.js";
+import type { ServerConfig } from "../../src/config.js";
+
+let root: string;
+let config: ServerConfig;
+
+beforeEach(() => {
+  root = makeWorkspace();
+  config = makeConfig(root);
+});
+
+afterEach(() => cleanup(root));
+
+const within = (ctx: ReturnType<typeof buildGuardContext>, raw: string): boolean | undefined =>
+  ctx.paths.find((p) => p.raw === raw)?.withinWorkspace;
+
+describe("buildGuardContext — command tools", () => {
+  it("analyzes bash and resolves in-workspace vs escaping paths", () => {
+    const ok = buildGuardContext("bash", { command: "cat src/a.ts" }, config);
+    expect(ok.bash?.undecidable).toBe(false);
+    expect(within(ok, "src/a.ts")).toBe(true);
+
+    const esc = buildGuardContext("bash", { command: "cat /etc/passwd" }, config);
+    expect(within(esc, "/etc/passwd")).toBe(false);
+  });
+
+  it("expands ~/ with shell semantics so it escapes the workspace", () => {
+    const ctx = buildGuardContext("bash", { command: "cat ~/.ssh/id_rsa" }, config);
+    expect(within(ctx, "~/.ssh/id_rsa")).toBe(false);
+  });
+
+  it("adds cwd as an fs-semantics path fact", () => {
+    const ctx = buildGuardContext("bash", { command: "ls", cwd: "sub" }, config);
+    expect(within(ctx, "sub")).toBe(true);
+  });
+
+  it("handles monitor_start like bash", () => {
+    const ctx = buildGuardContext("monitor_start", { command: "npm run dev" }, config);
+    expect(ctx.bash).toBeDefined();
+  });
+});
+
+describe("buildGuardContext — path-arg tools", () => {
+  it("resolves the path arg, flagging escapes", () => {
+    expect(within(buildGuardContext("read_file", { path: "a.ts" }, config), "a.ts")).toBe(true);
+    expect(within(buildGuardContext("write_file", { path: "../x" }, config), "../x")).toBe(false);
+  });
+
+  it("treats a literal ~ path arg with fs semantics (stays inside)", () => {
+    expect(within(buildGuardContext("read_file", { path: "~" }, config), "~")).toBe(true);
+  });
+});
+
+describe("buildGuardContext — apply_patch", () => {
+  it("extracts paths from diff headers, ignoring /dev/null", () => {
+    const patch = ["--- a/src/x.ts", "+++ b/src/x.ts", "--- /dev/null", "+++ b/new.ts"].join("\n");
+    const ctx = buildGuardContext("apply_patch", { patch }, config);
+    const raws = ctx.paths.map((p) => p.raw);
+    expect(raws).toContain("src/x.ts");
+    expect(raws).toContain("new.ts");
+    expect(raws).not.toContain("/dev/null");
+  });
+});
+
+describe("buildGuardContext — tools without path/command args", () => {
+  it("returns empty paths and no bash facts", () => {
+    const ctx = buildGuardContext("monitor_poll", { id: "m1" }, config);
+    expect(ctx.paths).toHaveLength(0);
+    expect(ctx.bash).toBeUndefined();
+  });
+});
+
+describe("buildGuardContext — missing / absent args", () => {
+  it("produces no facts when the relevant arg is absent", () => {
+    expect(buildGuardContext("bash", {}, config).bash).toBeUndefined();
+    expect(buildGuardContext("bash", {}, config).paths).toHaveLength(0);
+    expect(buildGuardContext("read_file", {}, config).paths).toHaveLength(0);
+    expect(buildGuardContext("apply_patch", {}, config).paths).toHaveLength(0);
+  });
+
+  it("expands a bare ~ with shell semantics", () => {
+    const ctx = buildGuardContext("bash", { command: "cd ~" }, config);
+    expect(within(ctx, "~")).toBe(false);
+  });
+
+  it("ignores blank diff headers and body lines", () => {
+    const patch = ["--- ", "+++ b/only.ts", "context line"].join("\n");
+    const raws = buildGuardContext("apply_patch", { patch }, config).paths.map((p) => p.raw);
+    expect(raws).toEqual(["only.ts"]);
+  });
+});

@@ -28,6 +28,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./guard": {
+      "types": "./dist/guard/index.d.ts",
+      "import": "./dist/guard/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

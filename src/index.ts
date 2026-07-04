@@ -39,6 +39,25 @@ export type { ServerConfig, AgentToolsOptions } from "./config.js";
 
 export { tools, readOnlyTools, getTool, selectSurface } from "./tools/registry.js";
 export type { ToolDef } from "./tools/types.js";
+
+export {
+  analyzeBash,
+  buildGuardContext,
+  withinWorkspace,
+  touchesOutside,
+  commandsIn,
+} from "./guard/index.js";
+export type {
+  Verdict,
+  GuardDecision,
+  Segment,
+  BashFacts,
+  PathFact,
+  GuardContext,
+  Guard,
+  ElicitRequest,
+  Elicit,
+} from "./guard/index.js";
 export type { ContentPart, TextPart, ImagePart } from "./tools/content.js";
 export { contentText } from "./tools/content.js";
 

@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { statSync } from "node:fs";
 import path from "node:path";
+import type { Guard, Elicit } from "./guard/types.js";
 
 export interface ServerConfig {
   workspaceRoot: string;
@@ -24,6 +25,10 @@ export interface ServerConfig {
   readOnly: boolean;
 
   confineToWorkspace: boolean;
+
+  guard?: Guard;
+
+  elicit?: Elicit;
 }
 
 export const DEFAULT_MAX_OUTPUT_BYTES = 131072;
@@ -158,6 +163,10 @@ export interface AgentToolsOptions {
   maxMonitors?: number;
 
   probeRipgrep?: () => boolean;
+
+  guard?: Guard;
+
+  elicit?: Elicit;
 }
 
 export function resolveConfig(options: AgentToolsOptions): ServerConfig {
@@ -206,6 +215,8 @@ export function resolveConfig(options: AgentToolsOptions): ServerConfig {
     ripgrepAvailable: (options.probeRipgrep ?? probeRipgrep)(),
     readOnly: options.readOnly ?? false,
     confineToWorkspace: options.confineToWorkspace ?? true,
+    guard: options.guard,
+    elicit: options.elicit,
   };
 }
 
