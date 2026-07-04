@@ -75,7 +75,7 @@ code `not_found`.
 | Option               | Default      | Meaning                                                                 |
 | -------------------- | ------------ | ----------------------------------------------------------------------- |
 | `workspaceRoot`      | — (required) | Base directory; relative tool paths resolve against it.                 |
-| `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`read_image`/`list_dir`/`glob`/`grep`/`file_stat`/`tree`/`outline`/`check_syntax`). |
+| `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`read_files`/`read_image`/`list_dir`/`glob`/`grep`/`diff`/`file_stat`/`tree`/`outline`/`check_syntax`). |
 | `confineToWorkspace` | `true`       | Reject paths that escape the workspace root (`path_escape`).             |
 | `maxOutputBytes`     | `131072`     | Per-result output cap (UTF-8 bytes); larger output is bounded.           |
 | `maxFileBytes`       | `20000000`   | Max size of an input file the text tools read; larger is rejected.      |
@@ -136,8 +136,8 @@ const { isError, content } = await dispatch("grep", { pattern: "TODO" }, config)
 | `monitor_stop`  | yes    | Stop a monitor (SIGTERM→SIGKILL) and remove its files.          |
 | `monitor_list`  | yes    | List running and finished monitors.                             |
 
-In read-only mode only `read_file`, `read_image`, `list_dir`, `glob`, `grep`,
-`file_stat`, `tree`, `outline`, and `check_syntax` are exposed. `outline` and
+In read-only mode only `read_file`, `read_files`, `read_image`, `list_dir`, `glob`, `grep`,
+`diff`, `file_stat`, `tree`, `outline`, and `check_syntax` are exposed. `outline` and
 `check_syntax` appear (on either surface) only when the optional
 `@vscode/tree-sitter-wasm` peer dependency is installed; when tree-sitter is
 available, the writing tools (`write_file`/`edit_file`/`multi_edit`/`apply_patch`)

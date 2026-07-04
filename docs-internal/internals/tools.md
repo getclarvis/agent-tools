@@ -1,6 +1,6 @@
 # Internals: the tool registry & handlers
 
-Source-level reference for the twenty-two tool handlers and how they're registered. The user-facing tool
+Source-level reference for the twenty-five tool handlers and how they're registered. The user-facing tool
 contracts live in [`SPEC.md`](../../SPEC.md) and the published
 [tools reference](https://agent-tools.clarvis.dev/reference/tools); this page maps each tool to its
 `src/` module and the `lib/` primitives it leans on.
@@ -31,20 +31,20 @@ The handler always returns a `string`. Where a tool has structured output (`bash
 ## The registry
 
 ```ts
-export const tools: ToolDef[] = [readFile, readImage, writeFile, editFile, multiEdit,
-                                 applyPatchTool, listDir, globTool, grep, bash,
-                                 monitorStart, monitorPoll, monitorStop, monitorList,
-                                 move, copy, mkdir, remove, fileStat, tree,
-                                 outline, checkSyntax];
-export const readOnlyTools: ToolDef[] = [readFile, readImage, listDir, globTool, grep,
-                                         fileStat, tree, outline, checkSyntax];
+export const tools: ToolDef[] = [readFile, readImage, readFiles, writeFile, editFile,
+                                 multiEdit, applyPatchTool, replace, listDir, globTool,
+                                 grep, diffTool, bash, monitorStart, monitorPoll,
+                                 monitorStop, monitorList, move, copy, mkdir, remove,
+                                 fileStat, tree, outline, checkSyntax];
+export const readOnlyTools: ToolDef[] = [readFile, readImage, readFiles, listDir, globTool,
+                                         grep, diffTool, fileStat, tree, outline, checkSyntax];
 ```
 
 `selectSurface(readOnly, treeSitterAvailable = true)` returns one or the other, filtering
 `outline`/`check_syntax` out of either when the tree-sitter peer is absent; `getTool(name, surface)`
 is a `find` by name. Order in `tools` is the order `listTools` advertises them.
 
-## The twenty-two tools
+## The twenty-five tools
 
 | Tool | Module | Mutating | Key `lib/` primitives |
 |---|---|---|---|
@@ -71,8 +71,8 @@ is a `find` by name. Order in `tools` is the order `listTools` advertises them.
 | `monitor_stop` | `monitor.ts` | yes | process-group signal (SIGTERM→SIGKILL) + sidecar cleanup |
 | `monitor_list` | `monitor.ts` | yes | enumerates every monitor's sidecars, newest first |
 
-- **Read-only surface** is exactly `read_file`, `read_image`, `list_dir`, `glob`, `grep`, `file_stat`,
-  `tree`, `outline`, `check_syntax`. Everything else is hidden under `readOnly: true` and returns
+- **Read-only surface** is exactly `read_file`, `read_files`, `read_image`, `list_dir`, `glob`, `grep`,
+  `diff`, `file_stat`, `tree`, `outline`, `check_syntax`. Everything else is hidden under `readOnly: true` and returns
   `not_found`. `outline`/`check_syntax` are additionally hidden (on both surfaces) when
   `config.treeSitterAvailable` is false — the optional `@vscode/tree-sitter-wasm` peer is absent.
 - **`bash` is the only `bounded: true` tool** — it splits `maxOutputBytes` across stdout/stderr with

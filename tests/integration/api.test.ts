@@ -7,6 +7,7 @@ const FULL = [
   "bash",
   "check_syntax",
   "copy",
+  "diff",
   "edit_file",
   "file_stat",
   "glob",
@@ -21,8 +22,10 @@ const FULL = [
   "multi_edit",
   "outline",
   "read_file",
+  "read_files",
   "read_image",
   "remove",
+  "replace",
   "tree",
   "write_file",
 ];
@@ -34,7 +37,7 @@ describe("createAgentTools (library API)", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("lists the twenty-two tools and exposes the resolved config", () => {
+  it("lists the twenty-five tools and exposes the resolved config", () => {
     const t = createAgentTools({
       workspaceRoot: root,
       probeRipgrep: () => false,
@@ -80,7 +83,17 @@ describe("createAgentTools (library API)", () => {
         .listTools()
         .map((x) => x.name)
         .sort(),
-    ).toEqual(["file_stat", "glob", "grep", "list_dir", "read_file", "read_image", "tree"]);
+    ).toEqual([
+      "diff",
+      "file_stat",
+      "glob",
+      "grep",
+      "list_dir",
+      "read_file",
+      "read_files",
+      "read_image",
+      "tree",
+    ]);
 
     const w = await t.callTool("write_file", { path: "x.txt", content: "nope" });
     expect(w.isError).toBe(true);

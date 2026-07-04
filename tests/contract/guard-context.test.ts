@@ -86,6 +86,60 @@ describe("buildGuardContext — apply_patch", () => {
   });
 });
 
+describe("buildGuardContext — read_files (array of paths)", () => {
+  it("resolves every path in the array, flagging escapes", () => {
+    const ctx = buildGuardContext("read_files", { paths: ["a.ts", "../x", "sub/b.ts"] }, config);
+    expect(ctx.paths.map((p) => p.raw)).toEqual(["a.ts", "../x", "sub/b.ts"]);
+    expect(within(ctx, "a.ts")).toBe(true);
+    expect(within(ctx, "../x")).toBe(false);
+    expect(within(ctx, "sub/b.ts")).toBe(true);
+  });
+
+  it("ignores non-string entries and a missing paths arg", () => {
+    const raws = buildGuardContext("read_files", { paths: ["a.ts", 3, null] }, config).paths.map(
+      (p) => p.raw,
+    );
+    expect(raws).toEqual(["a.ts"]);
+    expect(buildGuardContext("read_files", {}, config).paths).toHaveLength(0);
+  });
+});
+
+describe("buildGuardContext — diff (from + to)", () => {
+  it("resolves both endpoints and flags an escaping one", () => {
+    const ctx = buildGuardContext("diff", { from: "a.ts", to: "../b.ts" }, config);
+    expect(ctx.paths.map((p) => p.raw)).toEqual(["a.ts", "../b.ts"]);
+    expect(within(ctx, "a.ts")).toBe(true);
+    expect(within(ctx, "../b.ts")).toBe(false);
+  });
+});
+
+describe("buildGuardContext — replace (scope)", () => {
+  it("surfaces an explicit path as the scope, flagging escapes", () => {
+    const inside = buildGuardContext(
+      "replace",
+      { path: "src", pattern: "a", replacement: "b" },
+      config,
+    );
+    expect(within(inside, "src")).toBe(true);
+    const out = buildGuardContext(
+      "replace",
+      { path: "../x", pattern: "a", replacement: "b" },
+      config,
+    );
+    expect(within(out, "../x")).toBe(false);
+  });
+
+  it("falls back to the workspace root when only a glob is given", () => {
+    const ctx = buildGuardContext(
+      "replace",
+      { glob: "**/*.ts", pattern: "a", replacement: "b" },
+      config,
+    );
+    expect(ctx.paths.map((p) => p.raw)).toEqual(["."]);
+    expect(within(ctx, ".")).toBe(true);
+  });
+});
+
 describe("buildGuardContext — tools without path/command args", () => {
   it("returns empty paths and no bash facts", () => {
     const ctx = buildGuardContext("monitor_poll", { id: "m1" }, config);

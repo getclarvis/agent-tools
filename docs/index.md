@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "@clarvis/agent-tools"
   text: The coding tools your agent needs — as a plain library
-  tagline: Twenty batteries-included tools to read, search, edit, patch, move, run, and monitor code over a workspace. Transport-agnostic and confined to your workspace by default — embed them in any agent loop, or drive them from a transport of your own.
+  tagline: Twenty-five batteries-included tools to read, search, edit, patch, move, run, and monitor code over a workspace. Transport-agnostic and confined to your workspace by default — embed them in any agent loop, or drive them from a transport of your own.
   image:
     src: /logo.svg
     alt: "@clarvis/agent-tools"
@@ -44,7 +44,7 @@ features:
 
 `@clarvis/agent-tools` is the tool layer for an LLM coding agent, packaged as a library you call
 directly. You give it a workspace root; it gives you a validated, bounded, workspace-confined surface
-of twenty-two tools — the primitives an agent needs to read, search, understand, edit, move, run,
+of twenty-five tools — the primitives an agent needs to read, search, understand, edit, move, run,
 and monitor code:
 
 - **Advertise a tool surface to your model.** `listTools()` returns each tool's `name`,

@@ -52,9 +52,9 @@ security model, see [README.md](./README.md).
 
 ## Read-only surface
 
-In `--read-only` mode only `read_file`, `read_image`, `list_dir`, `glob`, `grep`,
-`file_stat`, `tree`, `outline`, and `check_syntax` are exposed; the mutating tools are
-not registered.
+In `--read-only` mode only `read_file`, `read_files`, `read_image`, `list_dir`, `glob`,
+`grep`, `diff`, `file_stat`, `tree`, `outline`, and `check_syntax` are exposed; the mutating
+tools are not registered.
 
 ## Tree-sitter availability
 
@@ -84,6 +84,23 @@ with the next `offset` is appended.
 
 **Errors:** `not_found`, `not_a_file` (directory), `is_binary`, `too_large`,
 `path_escape`, `invalid_input` (offset 0, or a positive offset past EOF).
+
+## read_files
+
+Read a batch of text files in one call. Each file is rendered like `read_file` (numbered
+lines) under a `==> <path> <==` header.
+
+**Input:** `paths` (string[], required, 1–64 entries).
+
+**Behavior:** Reads each path in order. A readable file appears under its header with
+numbered lines (`(empty file)` for empty). A path that fails (missing, binary, directory,
+too large, escaping) becomes a `==> <path> — <code>: <message> <==` line **without failing
+the batch**. The combined output is bounded by `MAX_OUTPUT_BYTES`: a large file is
+line-truncated, and once the budget is exhausted the remaining files are dropped with a
+`[... N more file(s) not shown ...]` marker.
+
+**Errors:** `invalid_input` (empty array, more than 64 entries, wrong types). Per-file
+problems are reported inline, not as a tool error.
 
 ## read_image
 
@@ -169,6 +186,21 @@ offset=B for more`; an `offset` past the end on a complete scan returns
 `(no results at offset N; M total)`.
 
 **Errors:** `not_found`, `path_escape`, `invalid_input` (bad regex).
+
+## diff
+
+Compare two text files and return a unified diff — no git required.
+
+**Input:** `from` (string, required — the left file); `to` (string, required — the right
+file).
+
+**Behavior:** Reads both files (UTF-8/UTF-16, subject to `MAX_FILE_BYTES`) and normalizes
+line endings to LF before comparing, so a pure CRLF-vs-LF difference reports no change.
+Returns a standard unified diff (`--- from`, `+++ to`, `@@` hunks); identical content
+returns `(no differences)`. The diff is bounded by `MAX_OUTPUT_BYTES`.
+
+**Errors:** `not_found`, `not_a_file` (directory), `is_binary`, `too_large`, `path_escape`
+(for either operand).
 
 ## file_stat
 
@@ -332,6 +364,29 @@ UTF-8.
 
 **Errors:** `patch_failed` (hunk did not apply; reports the file), `invalid_input`,
 `not_found`, `not_a_file`, `is_binary`, `too_large`, `path_escape`, `io_error`.
+
+## replace
+
+Project-wide regex find/replace, preview-first, applied atomically.
+
+**Input:** `pattern` (string, required — a JavaScript regular expression, same engine as
+the in-process `grep`); `replacement` (string, required — supports `$1`..`$9`/`$&` capture
+refs and `$$` for a literal `$`); `path` (string — a file or directory scope); `glob`
+(string — glob filter under the scope); `ignore_case` (boolean, default false); `multiline`
+(boolean, default false — `m`+`s` flags); `dry_run` (boolean, default **true**). At least
+one of `path` / `glob` is required.
+
+**Behavior:** Enumerates the scope (a directory is walked honoring the git ignore stack;
+binary and over-`MAX_FILE_BYTES` files are skipped) and applies the global regex to each
+file's `\n`-normalized content. With `dry_run` true (the default) it writes nothing and
+returns a totals line plus a unified-diff preview per changed file. With `dry_run` false it
+applies every change **atomically** (all files commit or none do) under per-file locks,
+preserving each file's line endings and BOM, and returns a per-file summary that may carry
+syntax warnings for up to five files. No matches returns `(no matches)`. Writing through a
+symlink is refused. A pattern that can match the empty string is rejected.
+
+**Errors:** `invalid_input` (bad regex, empty-string-matching pattern, or neither `path`
+nor `glob`), `not_found` (missing explicit `path`), `path_escape`, `io_error`.
 
 ## move
 

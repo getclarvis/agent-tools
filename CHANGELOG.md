@@ -49,6 +49,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   grammars, MIT); when absent, the two tools are hidden from the surface — indistinguishable from
   unknown tools — and writes are unannotated. Availability is probed once at config resolution
   (`treeSitterAvailable`, injectable via `probeTreeSitter`), so the core install stays lean.
+- **`read_files` tool.** Read up to 64 text files in a single call, each rendered like `read_file`
+  (numbered lines) under a `==> <path> <==` header. A failing path becomes an inline error line
+  without failing the batch; the combined output is bounded, dropping later files with a marker when
+  the budget runs out. Available in the read-only surface.
+- **`diff` tool.** Unified diff between two workspace text files, without git — line endings are
+  normalized before comparison, and identical content yields `(no differences)`. Available in the
+  read-only surface.
+- **`replace` tool.** Project-wide regex find/replace, preview-first: `dry_run` defaults to true and
+  returns match counts plus a unified-diff preview; `dry_run: false` applies every edit atomically
+  (all files or none) under per-file locks, preserving line endings and BOM, and can carry syntax
+  warnings for up to five files. Scoped by `path` and/or `glob`, honors the git ignore stack, skips
+  binary/oversized files, refuses to write through a symlink, and rejects a pattern that matches the
+  empty string. Replaces the `sed -i`-via-`bash` pattern with a confined, guardable, atomic operation.
 
 No new error codes: the new tools reuse `invalid_input` (unsupported extension), `not_found`,
 `not_a_file`, `is_binary`, `too_large` (a 2 MB parse limit), `path_escape`, `timeout`, `aborted`,

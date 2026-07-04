@@ -44,7 +44,7 @@ below any threshold fails the build.
 - `src/core.ts` — the dispatch pipeline: validate (ajv) → run handler → bound output → serialize error.
 - `src/config.ts` — config resolution, defaults, and the argv/env builder.
 - `src/errors.ts` — `ToolError`, `serializeError`, `fsError`, and the `ErrorCode` union.
-- `src/tools/` — the nine tool handlers plus the registry (`registry.ts`) and `ToolDef` type.
+- `src/tools/` — the twenty-five tool handlers plus the registry (`registry.ts`) and `ToolDef` type.
 - `src/lib/` — the shared primitives: path confinement, text decode/encode, the edit match cascade,
   atomic writes, the two search backends, and output bounding/spill.
 - `tests/` — `contract/` (one file per source module — each tool, plus `config`, `errors`, and each
