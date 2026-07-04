@@ -16,9 +16,9 @@ for `bash`, a `{ exit_code, … }` JSON object, which is **not** an error even o
 
 | Code              | Meaning                                                      | Raised by (examples)                                   |
 | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
-| `invalid_input`   | Arguments failed schema or semantic validation.              | Any tool (ajv); `edit_file` identical strings.         |
-| `not_found`       | Path does not exist — or the tool name is unknown/hidden.    | All path tools; unknown/read-only-hidden tool.         |
-| `not_a_file`      | Path was a directory where a file was expected (or vice).    | `read_file`, `list_dir`, `write_file`, `apply_patch`, `bash` (bad `cwd`). |
+| `invalid_input`   | Arguments failed schema or semantic validation.              | Any tool (ajv); `edit_file` identical strings; `move`/`copy` existing destination or symlink; `remove` symlink. |
+| `not_found`       | Path does not exist — or the tool name is unknown/hidden.    | All path tools; `move`/`remove` missing source; unknown/read-only-hidden tool. |
+| `not_a_file`      | Path was a directory where a file was expected (or vice).    | `read_file`, `list_dir`, `tree`, `write_file`, `apply_patch`, `move`, `copy`, `mkdir`, `remove`, `bash` (bad `cwd`). |
 | `is_binary`       | File appears binary; text tools refuse it.                   | `read_file`, `edit_file`, `multi_edit`, `apply_patch`. |
 | `not_an_image`    | File is not a supported image format (PNG/JPEG/GIF/WebP).    | `read_image`.                                          |
 | `no_match`        | `old_string` was not found.                                  | `edit_file`, `multi_edit`.                             |

@@ -68,8 +68,8 @@ node --input-type=module -e "
 "
 ```
 
-- [ ] The library imports, `listTools()` returns the nine tools, and a `read_file`/`list_dir` call
-      returns a bounded result. In read-only mode only the four read tools appear.
+- [ ] The library imports, `listTools()` returns the twenty tools, and a `read_file`/`list_dir` call
+      returns a bounded result. In read-only mode only the seven read tools appear.
 
 ## 6. Publish
 

@@ -2,9 +2,10 @@
 
 A minimal, opinionated set of coding tools for driving an LLM agent over a
 workspace, usable as a **plain library**. It gives an agent the primitives it
-needs to read, search, edit, run, and monitor code: `read_file`, `read_image`,
-`list_dir`, `glob`, `grep`, `write_file`, `edit_file`, `multi_edit`, `apply_patch`,
-`bash`, and the `monitor_*` background-process tools.
+needs to read, search, edit, move, run, and monitor code: `read_file`, `read_image`,
+`list_dir`, `glob`, `grep`, `file_stat`, `tree`, `write_file`, `edit_file`, `multi_edit`,
+`apply_patch`, `move`, `copy`, `mkdir`, `remove`, `bash`, and the `monitor_*`
+background-process tools.
 
 This package is **transport-agnostic**: it carries no built-in transport and no
 agent loop — it is the tools, and nothing else. Advertise the surface, dispatch
@@ -69,7 +70,7 @@ code `not_found`.
 | Option               | Default      | Meaning                                                                 |
 | -------------------- | ------------ | ----------------------------------------------------------------------- |
 | `workspaceRoot`      | — (required) | Base directory; relative tool paths resolve against it.                 |
-| `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`read_image`/`list_dir`/`glob`/`grep`). |
+| `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`read_image`/`list_dir`/`glob`/`grep`/`file_stat`/`tree`). |
 | `confineToWorkspace` | `true`       | Reject paths that escape the workspace root (`path_escape`).             |
 | `maxOutputBytes`     | `131072`     | Per-result output cap (UTF-8 bytes); larger output is bounded.           |
 | `maxFileBytes`       | `20000000`   | Max size of an input file the text tools read; larger is rejected.      |
@@ -111,18 +112,24 @@ const { isError, content } = await dispatch("grep", { pattern: "TODO" }, config)
 | `list_dir`    | no       | List the entries of a directory.                                  |
 | `glob`        | no       | Find files by glob, most-recently-modified first.                 |
 | `grep`        | no       | Search file contents by regular expression (optionally multiline).|
-| `write_file`  | yes      | Create or overwrite a file (atomic).                              |
+| `file_stat`   | no       | Structured metadata for a path (type, size, mtime, mode) as JSON. |
+| `tree`        | no       | Print a directory as an indented, gitignore-aware tree.           |
+| `write_file`  | yes      | Create or overwrite a file (atomic).                             |
 | `edit_file`   | yes      | Replace one exact occurrence of a string in a file.              |
 | `multi_edit`  | yes      | Apply several `edit_file`-style edits to one file atomically.    |
 | `apply_patch` | yes      | Apply a unified diff (modify/create/delete/rename) atomically.   |
+| `move`        | yes      | Move/rename one file (atomic).                                   |
+| `copy`        | yes      | Copy one file, binary-safe (atomic).                            |
+| `mkdir`       | yes      | Create a directory and missing parents.                         |
+| `remove`      | yes      | Delete one file.                                                |
 | `bash`        | yes      | Run a shell command (`sh -c`) and capture stdout/stderr/exit.    |
 | `monitor_start` | yes    | Start a background command (dev server, watcher); return an id, optionally waiting until ready. |
 | `monitor_poll`  | yes    | Read a monitor's new output since a byte offset; report running state and exit code. |
 | `monitor_stop`  | yes    | Stop a monitor (SIGTERM→SIGKILL) and remove its files.          |
 | `monitor_list`  | yes    | List running and finished monitors.                             |
 
-In read-only mode only `read_file`, `read_image`, `list_dir`, `glob`, and `grep` are
-exposed.
+In read-only mode only `read_file`, `read_image`, `list_dir`, `glob`, `grep`,
+`file_stat`, and `tree` are exposed.
 
 See [SPEC.md](./SPEC.md) for the full per-tool contract (inputs, behavior, and
 error codes).

@@ -9,6 +9,12 @@ import { globTool } from "./glob.js";
 import { grep } from "./grep.js";
 import { bash } from "./bash.js";
 import { monitorStart, monitorPoll, monitorStop, monitorList } from "./monitor.js";
+import { move } from "./move.js";
+import { copy } from "./copy.js";
+import { mkdir } from "./mkdir.js";
+import { remove } from "./remove.js";
+import { fileStat } from "./file-stat.js";
+import { tree } from "./tree.js";
 import type { ToolDef } from "./types.js";
 
 export const tools: ToolDef[] = [
@@ -26,9 +32,23 @@ export const tools: ToolDef[] = [
   monitorPoll,
   monitorStop,
   monitorList,
+  move,
+  copy,
+  mkdir,
+  remove,
+  fileStat,
+  tree,
 ];
 
-export const readOnlyTools: ToolDef[] = [readFile, readImage, listDir, globTool, grep];
+export const readOnlyTools: ToolDef[] = [
+  readFile,
+  readImage,
+  listDir,
+  globTool,
+  grep,
+  fileStat,
+  tree,
+];
 
 export function selectSurface(readOnly: boolean): ToolDef[] {
   return readOnly ? readOnlyTools : tools;

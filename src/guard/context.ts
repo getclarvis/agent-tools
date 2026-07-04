@@ -13,7 +13,12 @@ const PATH_ARG_TOOLS = new Set([
   "list_dir",
   "glob",
   "grep",
+  "file_stat",
+  "tree",
+  "mkdir",
+  "remove",
 ]);
+const SRC_DEST_TOOLS = new Set(["move", "copy"]);
 
 export function buildGuardContext(
   tool: string,
@@ -34,6 +39,9 @@ export function buildGuardContext(
     if (typeof args.patch === "string") {
       for (const p of patchPaths(args.patch)) paths.push(resolveCandidate(p, root));
     }
+  } else if (SRC_DEST_TOOLS.has(tool)) {
+    if (typeof args.source === "string") paths.push(resolveCandidate(args.source, root));
+    if (typeof args.destination === "string") paths.push(resolveCandidate(args.destination, root));
   } else if (PATH_ARG_TOOLS.has(tool)) {
     if (typeof args.path === "string") paths.push(resolveCandidate(args.path, root));
   }

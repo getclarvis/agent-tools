@@ -1,6 +1,6 @@
 # Read-only mode
 
-> Set `readOnly: true` and the tool surface shrinks to the five non-mutating tools. The mutating
+> Set `readOnly: true` and the tool surface shrinks to the seven non-mutating tools. The mutating
 > tools and `bash` are not registered at all — a model literally cannot call them.
 
 ## What it exposes
@@ -11,12 +11,12 @@ import { createAgentTools } from "@clarvis/agent-tools";
 const tools = createAgentTools({ workspaceRoot: process.cwd(), readOnly: true });
 
 console.log(tools.listTools().map((t) => t.name));
-// [ 'read_file', 'read_image', 'list_dir', 'glob', 'grep' ]
+// [ 'read_file', 'read_image', 'list_dir', 'glob', 'grep', 'file_stat', 'tree' ]
 ```
 
-In read-only mode only **`read_file`**, **`read_image`**, **`list_dir`**, **`glob`**, and **`grep`**
-are exposed. `write_file`, `edit_file`, `multi_edit`, `apply_patch`, `bash`, and the four `monitor_*`
-tools are dropped from the surface.
+In read-only mode only **`read_file`**, **`read_image`**, **`list_dir`**, **`glob`**, **`grep`**,
+**`file_stat`**, and **`tree`** are exposed. `write_file`, `edit_file`, `multi_edit`, `apply_patch`,
+`move`, `copy`, `mkdir`, `remove`, `bash`, and the four `monitor_*` tools are dropped from the surface.
 
 ## How a blocked call behaves
 

@@ -51,6 +51,28 @@ describe("buildGuardContext — path-arg tools", () => {
   it("treats a literal ~ path arg with fs semantics (stays inside)", () => {
     expect(within(buildGuardContext("read_file", { path: "~" }, config), "~")).toBe(true);
   });
+
+  it("resolves the path arg for file_stat, tree, mkdir, and remove", () => {
+    for (const tool of ["file_stat", "tree", "mkdir", "remove"]) {
+      expect(within(buildGuardContext(tool, { path: "sub/a.ts" }, config), "sub/a.ts")).toBe(true);
+      expect(within(buildGuardContext(tool, { path: "../x" }, config), "../x")).toBe(false);
+    }
+  });
+});
+
+describe("buildGuardContext — move / copy (source + destination)", () => {
+  it("resolves both endpoints and flags an escaping one", () => {
+    for (const tool of ["move", "copy"]) {
+      const ctx = buildGuardContext(tool, { source: "a.txt", destination: "../out.txt" }, config);
+      expect(ctx.paths.map((p) => p.raw)).toEqual(["a.txt", "../out.txt"]);
+      expect(within(ctx, "a.txt")).toBe(true);
+      expect(within(ctx, "../out.txt")).toBe(false);
+    }
+  });
+
+  it("produces no facts when the endpoints are absent", () => {
+    expect(buildGuardContext("move", {}, config).paths).toHaveLength(0);
+  });
 });
 
 describe("buildGuardContext — apply_patch", () => {

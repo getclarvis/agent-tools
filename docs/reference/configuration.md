@@ -11,7 +11,7 @@
 | Option               | Type              | Default             | Meaning                                                                                          |
 | -------------------- | ----------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
 | `workspaceRoot`      | `string`          | — (required)        | Base directory; relative tool paths resolve against it. Must be an existing directory.           |
-| `readOnly`           | `boolean`         | `false`             | Expose only the non-mutating tools (`read_file` / `read_image` / `list_dir` / `glob` / `grep`).  |
+| `readOnly`           | `boolean`         | `false`             | Expose only the non-mutating tools (`read_file` / `read_image` / `list_dir` / `glob` / `grep` / `file_stat` / `tree`). |
 | `confineToWorkspace` | `boolean`         | `true`              | Reject paths that escape the workspace root (`path_escape`). `false` restores unrestricted paths.|
 | `maxOutputBytes`     | `number`          | `131072` (128 KB)   | Per-result output cap in UTF-8 bytes. Floor `1024`.                                              |
 | `maxFileBytes`       | `number`          | `20000000` (20 MB)  | Max size of an input file the text tools read; larger is rejected. Floor `1024`.                |

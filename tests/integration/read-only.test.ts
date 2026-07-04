@@ -12,16 +12,20 @@ import {
 } from "../helpers/fixtures.js";
 import type { ServerConfig } from "../../src/config.js";
 
-const READ_TOOLS = ["glob", "grep", "list_dir", "read_file", "read_image"];
+const READ_TOOLS = ["file_stat", "glob", "grep", "list_dir", "read_file", "read_image", "tree"];
 const HIDDEN_TOOLS = [
   "apply_patch",
   "bash",
+  "copy",
   "edit_file",
+  "mkdir",
   "monitor_list",
   "monitor_poll",
   "monitor_start",
   "monitor_stop",
+  "move",
   "multi_edit",
+  "remove",
   "write_file",
 ];
 
@@ -37,7 +41,7 @@ describe("read-only surface", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("advertises exactly the five non-mutating tools", () => {
+  it("advertises exactly the seven non-mutating tools", () => {
     expect(
       selectSurface(true)
         .map((t) => t.name)
@@ -45,16 +49,16 @@ describe("read-only surface", () => {
     ).toEqual(READ_TOOLS);
   });
 
-  it("the nine mutating/exec tools are absent from the read-only surface", () => {
+  it("the thirteen mutating/exec tools are absent from the read-only surface", () => {
     const names = new Set(selectSurface(true).map((t) => t.name));
     for (const hidden of HIDDEN_TOOLS) {
       expect(names.has(hidden), hidden).toBe(false);
     }
   });
 
-  it("the full (default) surface still advertises all fourteen", () => {
+  it("the full (default) surface still advertises all twenty", () => {
     expect(selectSurface(false)).toBe(tools);
-    expect(selectSurface(false).length).toBe(14);
+    expect(selectSurface(false).length).toBe(20);
   });
 
   it("a hidden tool and an unknown name are indistinguishable not_found errors", async () => {

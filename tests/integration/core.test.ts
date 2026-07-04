@@ -21,23 +21,29 @@ describe("core / registry", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("exposes exactly the fourteen fixed tools", () => {
+  it("exposes exactly the twenty fixed tools", () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         "apply_patch",
         "bash",
+        "copy",
         "edit_file",
+        "file_stat",
         "glob",
         "grep",
         "list_dir",
+        "mkdir",
         "monitor_list",
         "monitor_poll",
         "monitor_start",
         "monitor_stop",
+        "move",
         "multi_edit",
         "read_file",
         "read_image",
+        "remove",
+        "tree",
         "write_file",
       ].sort(),
     );
@@ -144,6 +150,14 @@ describe("listTools surface", () => {
   it("honours the read-only surface", () => {
     const ro = listTools(makeConfig(root, { readOnly: true }));
     const names = ro.map((t) => t.name).sort();
-    expect(names).toEqual(["glob", "grep", "list_dir", "read_file", "read_image"]);
+    expect(names).toEqual([
+      "file_stat",
+      "glob",
+      "grep",
+      "list_dir",
+      "read_file",
+      "read_image",
+      "tree",
+    ]);
   });
 });

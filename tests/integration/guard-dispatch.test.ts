@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeWorkspace, cleanup, makeConfig, callTool, exists } from "../helpers/fixtures.js";
+import {
+  makeWorkspace,
+  cleanup,
+  makeConfig,
+  callTool,
+  exists,
+  write,
+} from "../helpers/fixtures.js";
 import { touchesOutside } from "../../src/guard/index.js";
 import type { Guard, Elicit } from "../../src/guard/types.js";
 
@@ -82,5 +89,28 @@ describe("dispatch guard hook", () => {
     const allowed = await callTool("bash", { command: "echo hi" }, config);
     expect(allowed.isError).toBe(false);
     expect(allowed.json.stdout).toBe("hi\n");
+  });
+
+  it("guards move/copy by both endpoints — denies an escaping destination", async () => {
+    const guard: Guard = (ctx) =>
+      touchesOutside(ctx) ? { verdict: "deny" } : { verdict: "allow" };
+    const config = makeConfig(root, { guard });
+    write(root, "a.txt", "x");
+
+    const inside = await callTool("move", { source: "a.txt", destination: "b.txt" }, config);
+    expect(inside.isError).toBe(false);
+    expect(exists(root, "b.txt")).toBe(true);
+
+    // The guard sees the escaping destination and denies BEFORE the handler runs — the error is
+    // `denied` (guard), not `path_escape` (handler). A regression that dropped move/copy from the
+    // guard's path extraction would let this reach the handler and report `path_escape` instead.
+    write(root, "c.txt", "y");
+    const escaping = await callTool(
+      "copy",
+      { source: "c.txt", destination: "../leak.txt" },
+      config,
+    );
+    expect(escaping.isError).toBe(true);
+    expect(escaping.json.error).toBe("denied");
   });
 });

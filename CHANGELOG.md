@@ -7,6 +7,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+
+- **`move` tool.** Move or rename one regular file (atomic `rename`), creating missing destination
+  parent directories and preserving the file's permission mode. Refuses an existing destination
+  unless `overwrite: true`, refuses a directory source (files only — use `bash` for directories),
+  and refuses to act through a symlink.
+- **`copy` tool.** Copy one regular file, binary-safe, published atomically (staged in the
+  destination directory then renamed) with the source's mode preserved. Same overwrite / files-only /
+  symlink semantics as `move`; imposes no `MAX_FILE_BYTES` limit (it is a streaming copy).
+- **`mkdir` tool.** Create a directory and any missing parents (`mkdir -p`); idempotent, and
+  `not_a_file` if the path already exists as a file.
+- **`remove` tool.** Delete one regular file; `not_found` on a missing path, `not_a_file` on a
+  directory (use `bash` for recursive removal), and refuses to delete through a symlink.
+- **`file_stat` tool.** Return structured metadata for a path as a JSON object
+  (`type`/`size`/`mtime`/`mode`, plus `symlink_target` for symlinks and `binary`/`mime` for files).
+  Reads only a bounded head slice, so it works on files larger than `MAX_FILE_BYTES`. Available in
+  the read-only surface.
+- **`tree` tool.** Print a directory as an indented, gitignore-aware tree (`depth`-limited,
+  symlinked directories listed but not traversed, output byte-bounded). Available in the read-only
+  surface.
+
+No new error codes or config knobs: the four mutating tools reuse `invalid_input` (existing
+destination, symlink, identical paths), `not_found`, `not_a_file`, `path_escape`, and `io_error`.
+
 ## [0.2.0]
 
 ### Changed
@@ -84,6 +110,7 @@ Initial public release.
 - **VitePress documentation site** ([agent-tools.clarvis.dev](https://agent-tools.clarvis.dev)) and
   the canonical per-tool [`SPEC.md`](SPEC.md).
 
-[Unreleased]: https://github.com/getclarvis/agent-tools/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/getclarvis/agent-tools/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/getclarvis/agent-tools/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/getclarvis/agent-tools/compare/v0.1.1...v0.2.0
 [0.1.0]: https://github.com/getclarvis/agent-tools/releases/tag/v0.1.0
