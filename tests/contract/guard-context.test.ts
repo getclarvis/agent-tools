@@ -52,8 +52,8 @@ describe("buildGuardContext — path-arg tools", () => {
     expect(within(buildGuardContext("read_file", { path: "~" }, config), "~")).toBe(true);
   });
 
-  it("resolves the path arg for file_stat, tree, mkdir, and remove", () => {
-    for (const tool of ["file_stat", "tree", "mkdir", "remove"]) {
+  it("resolves the path arg for file_stat, tree, outline, check_syntax, mkdir, and remove", () => {
+    for (const tool of ["file_stat", "tree", "outline", "check_syntax", "mkdir", "remove"]) {
       expect(within(buildGuardContext(tool, { path: "sub/a.ts" }, config), "sub/a.ts")).toBe(true);
       expect(within(buildGuardContext(tool, { path: "../x" }, config), "../x")).toBe(false);
     }

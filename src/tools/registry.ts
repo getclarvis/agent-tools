@@ -15,6 +15,8 @@ import { mkdir } from "./mkdir.js";
 import { remove } from "./remove.js";
 import { fileStat } from "./file-stat.js";
 import { tree } from "./tree.js";
+import { outline } from "./outline.js";
+import { checkSyntax } from "./check-syntax.js";
 import type { ToolDef } from "./types.js";
 
 export const tools: ToolDef[] = [
@@ -38,6 +40,8 @@ export const tools: ToolDef[] = [
   remove,
   fileStat,
   tree,
+  outline,
+  checkSyntax,
 ];
 
 export const readOnlyTools: ToolDef[] = [
@@ -48,10 +52,15 @@ export const readOnlyTools: ToolDef[] = [
   grep,
   fileStat,
   tree,
+  outline,
+  checkSyntax,
 ];
 
-export function selectSurface(readOnly: boolean): ToolDef[] {
-  return readOnly ? readOnlyTools : tools;
+const SYNTAX_TOOLS = new Set(["outline", "check_syntax"]);
+
+export function selectSurface(readOnly: boolean, treeSitterAvailable = true): ToolDef[] {
+  const base = readOnly ? readOnlyTools : tools;
+  return treeSitterAvailable ? base : base.filter((t) => !SYNTAX_TOOLS.has(t.name));
 }
 
 export function getTool(name: string, surface: ToolDef[] = tools): ToolDef | undefined {

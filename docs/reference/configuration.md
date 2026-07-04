@@ -11,7 +11,7 @@
 | Option               | Type              | Default             | Meaning                                                                                          |
 | -------------------- | ----------------- | ------------------- | ------------------------------------------------------------------------------------------------ |
 | `workspaceRoot`      | `string`          | — (required)        | Base directory; relative tool paths resolve against it. Must be an existing directory.           |
-| `readOnly`           | `boolean`         | `false`             | Expose only the non-mutating tools (`read_file` / `read_image` / `list_dir` / `glob` / `grep` / `file_stat` / `tree`). |
+| `readOnly`           | `boolean`         | `false`             | Expose only the non-mutating tools (`read_file` / `read_image` / `list_dir` / `glob` / `grep` / `file_stat` / `tree` / `outline` / `check_syntax`). |
 | `confineToWorkspace` | `boolean`         | `true`              | Reject paths that escape the workspace root (`path_escape`). `false` restores unrestricted paths.|
 | `maxOutputBytes`     | `number`          | `131072` (128 KB)   | Per-result output cap in UTF-8 bytes. Floor `1024`.                                              |
 | `maxFileBytes`       | `number`          | `20000000` (20 MB)  | Max size of an input file the text tools read; larger is rejected. Floor `1024`.                |
@@ -21,6 +21,7 @@
 | `monitorReadyTimeoutMs` | `number`       | `30000` (30 s)      | Default time `monitor_start` waits for `ready_when` before returning. Floor `1`.                |
 | `maxMonitors`        | `number`          | `32`                | Max live background monitors at once; beyond it `monitor_start` fails with `too_many_monitors`. Floor `1`. |
 | `probeRipgrep`       | `() => boolean`   | probes `rg`         | Override ripgrep detection — e.g. `() => false` to force the in-process `grep` backend in tests.|
+| `probeTreeSitter`    | `() => boolean`   | probes the peer dep | Override `@vscode/tree-sitter-wasm` detection — `() => false` hides `outline`/`check_syntax` and disables write syntax warnings. |
 
 ```ts
 import { createAgentTools } from "@clarvis/agent-tools";
@@ -44,8 +45,8 @@ An invalid value — a missing/nonexistent `workspaceRoot`, a limit below its fl
 function resolveConfig(options: AgentToolsOptions): ServerConfig;
 ```
 
-Validates the options, verifies the workspace exists, probes for ripgrep, and returns a frozen
-`ServerConfig`. `createAgentTools` calls it internally; call it yourself when driving the
+Validates the options, verifies the workspace exists, probes for ripgrep and for the optional
+`@vscode/tree-sitter-wasm` peer dependency, and returns a frozen `ServerConfig`. `createAgentTools` calls it internally; call it yourself when driving the
 [core API](/reference/core-api) directly.
 
 ## `ServerConfig` {#serverconfig}
@@ -63,6 +64,7 @@ interface ServerConfig {
   monitorReadyTimeoutMs: number;
   maxMonitors: number;
   ripgrepAvailable: boolean; // whether `rg` was detected
+  treeSitterAvailable: boolean; // whether @vscode/tree-sitter-wasm resolved
   readOnly: boolean;
   confineToWorkspace: boolean;
 }

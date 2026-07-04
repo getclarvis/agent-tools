@@ -420,3 +420,48 @@ describe("edit_file no-match and ambiguous diagnostics", () => {
     expect(e.message).toContain(", …)");
   });
 });
+
+describe("edit_file syntax annotation", () => {
+  let root: string;
+  let config: ServerConfig;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+    config = makeConfig(root, { treeSitterAvailable: true });
+  });
+  afterEach(() => cleanup(root));
+
+  it("warns when an edit breaks the parse", async () => {
+    write(root, "a.ts", "const x = 1;\n");
+    const r = await callTool(
+      "edit_file",
+      { path: "a.ts", old_string: "= 1;", new_string: "= = 1;" },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("Replaced 1 occurrence in a.ts.");
+    expect(r.text).toContain("warning: typescript syntax error in a.ts at line 1");
+  });
+
+  it("stays silent when the edit keeps the file parsing", async () => {
+    write(root, "a.ts", "const x = 1;\n");
+    const r = await callTool(
+      "edit_file",
+      { path: "a.ts", old_string: "x = 1", new_string: "y = 2" },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).not.toContain("warning:");
+  });
+
+  it("stays silent when tree-sitter is unavailable", async () => {
+    write(root, "a.ts", "const x = 1;\n");
+    const r = await callTool(
+      "edit_file",
+      { path: "a.ts", old_string: "= 1;", new_string: "= = 1;" },
+      makeConfig(root),
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).not.toContain("warning:");
+  });
+});

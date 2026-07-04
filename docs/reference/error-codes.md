@@ -16,18 +16,18 @@ for `bash`, a `{ exit_code, … }` JSON object, which is **not** an error even o
 
 | Code              | Meaning                                                      | Raised by (examples)                                   |
 | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
-| `invalid_input`   | Arguments failed schema or semantic validation.              | Any tool (ajv); `edit_file` identical strings; `move`/`copy` existing destination or symlink; `remove` symlink. |
-| `not_found`       | Path does not exist — or the tool name is unknown/hidden.    | All path tools; `move`/`remove` missing source; unknown/read-only-hidden tool. |
+| `invalid_input`   | Arguments failed schema or semantic validation.              | Any tool (ajv); `edit_file` identical strings; `move`/`copy` existing destination or symlink; `remove` symlink; `outline`/`check_syntax` unsupported extension. |
+| `not_found`       | Path does not exist — or the tool name is unknown/hidden.    | All path tools; `move`/`remove` missing source; unknown, read-only-hidden, or tree-sitter-hidden tool. |
 | `not_a_file`      | Path was a directory where a file was expected (or vice).    | `read_file`, `list_dir`, `tree`, `write_file`, `apply_patch`, `move`, `copy`, `mkdir`, `remove`, `bash` (bad `cwd`). |
-| `is_binary`       | File appears binary; text tools refuse it.                   | `read_file`, `edit_file`, `multi_edit`, `apply_patch`. |
+| `is_binary`       | File appears binary; text tools refuse it.                   | `read_file`, `edit_file`, `multi_edit`, `apply_patch`, `outline`, `check_syntax`. |
 | `not_an_image`    | File is not a supported image format (PNG/JPEG/GIF/WebP).    | `read_image`.                                          |
 | `no_match`        | `old_string` was not found.                                  | `edit_file`, `multi_edit`.                             |
 | `ambiguous_match` | `old_string` matched more than once without `replace_all`.   | `edit_file`, `multi_edit`.                             |
 | `patch_failed`    | A patch hunk did not apply cleanly (names the file).         | `apply_patch`.                                         |
-| `timeout`         | The command exceeded its timeout (partial output returned).  | `bash`.                                                |
+| `timeout`         | The command exceeded its timeout (partial output returned), or a parse exceeded its budget. | `bash`; `outline`/`check_syntax`. |
 | `output_limit`    | Output exceeded the hard capture ceiling; the command was killed. | `bash`.                                            |
-| `aborted`         | The run was cancelled via the dispatch `AbortSignal`; the process group was SIGKILLed. | `bash`.                       |
-| `too_large`       | Input file exceeded `maxFileBytes`.                          | `read_file`, `edit_file`, `multi_edit`, `apply_patch`. |
+| `aborted`         | The run was cancelled via the dispatch `AbortSignal`; for `bash` the process group was SIGKILLed. | `bash`; `outline`/`check_syntax`. |
+| `too_large`       | Input file exceeded `maxFileBytes` (or the 2 MB parse limit).| `read_file`, `edit_file`, `multi_edit`, `apply_patch`, `outline`, `check_syntax`. |
 | `path_escape`     | Path resolved outside the confined workspace root.           | Any path tool when `confineToWorkspace` is on.         |
 | `monitor_not_found` | No monitor has the given `id` (it never existed or was stopped). | `monitor_poll`, `monitor_stop`.                  |
 | `too_many_monitors` | `monitor_start` would exceed `maxMonitors` live monitors.  | `monitor_start`.                                       |

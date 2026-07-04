@@ -130,3 +130,37 @@ describe("multi_edit edge cases", () => {
     expect(read(root, "f.txt")).toBe("alpha gamma");
   });
 });
+
+describe("multi_edit syntax annotation", () => {
+  let root: string;
+  let config: ServerConfig;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+    config = makeConfig(root, { treeSitterAvailable: true });
+  });
+  afterEach(() => cleanup(root));
+
+  it("warns when the combined edits break the parse", async () => {
+    write(root, "a.py", "def f():\n    return 1\n");
+    const r = await callTool(
+      "multi_edit",
+      { path: "a.py", edits: [{ old_string: "def f():", new_string: "def f(:" }] },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("Applied 1 edit to");
+    expect(r.text).toContain("warning: python syntax error in a.py at line 1");
+  });
+
+  it("stays silent when the result parses", async () => {
+    write(root, "a.py", "def f():\n    return 1\n");
+    const r = await callTool(
+      "multi_edit",
+      { path: "a.py", edits: [{ old_string: "return 1", new_string: "return 2" }] },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text).not.toContain("warning:");
+  });
+});

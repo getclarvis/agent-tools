@@ -53,7 +53,17 @@ security model, see [README.md](./README.md).
 ## Read-only surface
 
 In `--read-only` mode only `read_file`, `read_image`, `list_dir`, `glob`, `grep`,
-`file_stat`, and `tree` are exposed; the mutating tools are not registered.
+`file_stat`, `tree`, `outline`, and `check_syntax` are exposed; the mutating tools are
+not registered.
+
+## Tree-sitter availability
+
+`outline` and `check_syntax` require the optional `@vscode/tree-sitter-wasm` peer
+dependency. Availability is probed once when the configuration is resolved
+(`treeSitterAvailable`, injectable via `probeTreeSitter`); when the package is absent,
+both tools are hidden from the full and read-only surfaces — calling them is
+indistinguishable from calling an unknown tool (`not_found`) — and write results carry
+no syntax warnings.
 
 ---
 
@@ -192,6 +202,53 @@ a `(no entries)` line under the root.
 
 **Errors:** `not_found`, `not_a_file` (path is a file), `path_escape`, `io_error`.
 
+## outline
+
+Return the symbol skeleton of one source file. Requires the optional tree-sitter peer
+dependency (see [Tree-sitter availability](#tree-sitter-availability)).
+
+**Input:** `path` (string, required).
+
+**Behavior:** Parses the file with the grammar picked by its extension and returns a
+header line `<path> — <language>, <N> lines` followed by one indented line per declared
+symbol (classes, functions, methods, and the other per-language declaration forms): two
+spaces per nesting level, the declaration's first source line (trimmed, truncated to 150
+chars, trailing `{`/`:` stripped), and a 1-based `(start-end)` line range. A file with no
+symbols prints `(no symbols found)`. At most 2000 symbols are printed (a trailing
+`[... N more symbols omitted ...]` line reports the rest); output is byte-bounded. A file
+with syntax errors still produces an outline, plus a trailing `note:` recommending
+`check_syntax`. Supported languages: typescript (`.ts`/`.mts`/`.cts`), tsx, javascript
+(`.js`/`.mjs`/`.cjs`/`.jsx`), python, go, rust, java, c-sharp. Any other extension is
+`invalid_input`. Input must be within `MAX_FILE_BYTES` and a 2000000-byte parse limit;
+parsing is bounded by a 2-second budget (`timeout`).
+
+**Errors:** `invalid_input` (unsupported extension), `not_found`, `not_a_file`
+(directory), `is_binary`, `too_large`, `path_escape`, `timeout`, `aborted`, `io_error`,
+`internal` (runtime failed to load despite a positive probe).
+
+## check_syntax
+
+Parse one source file and report syntax errors as JSON. Requires the optional
+tree-sitter peer dependency (see [Tree-sitter availability](#tree-sitter-availability)).
+
+**Input:** `path` (string, required).
+
+**Behavior:** Parses the file with the grammar picked by its extension and returns one
+text part holding `{ path, language, ok, errors, error_count, truncated }`. Each entry of
+`errors` is `{ kind, line, column, near }`: `kind` is `error` (unparseable input; `near`
+is the trimmed source line, truncated to 80 chars) or `missing` (a token the parser
+expected but did not find; `near` is that token), with 1-based `line`/`column` (column in
+UTF-16 code units — approximate for non-ASCII lines). At most 50 errors are reported;
+`truncated: true` signals more. A pure parse check: `ok: true` means the file parses,
+not that it type-checks or compiles. Every bundled grammar is supported — typescript,
+tsx, javascript, python, go, rust, java, c-sharp, ruby, php, bash, css, ini, powershell,
+and c/cpp (`.c`/`.h` are routed to the cpp grammar pragmatically). Same size and time
+limits as `outline`.
+
+**Errors:** `invalid_input` (unsupported extension), `not_found`, `not_a_file`
+(directory), `is_binary`, `too_large`, `path_escape`, `timeout`, `aborted`, `io_error`,
+`internal`.
+
 ## write_file
 
 Create or overwrite a file with the given content (atomic).
@@ -199,6 +256,15 @@ Create or overwrite a file with the given content (atomic).
 **Input:** `path` (string, required); `content` (string, required).
 
 **Behavior:** Writes `content` exactly. Missing parent directories are created.
+
+**Syntax warning (all writing tools):** when tree-sitter is available and the written
+file's extension has a grammar, `write_file`, `edit_file`, `multi_edit`, and
+`apply_patch` append a
+`warning: <language> syntax error in <file> at line N, column C (near|missing ...)` line
+to their success message when the new content does not parse. Advisory only: the write
+always succeeds; content over 1000000 bytes, files without a grammar, and slow parses
+(over 1 second) are silently skipped, and `apply_patch` checks at most five written
+files per patch.
 
 **Errors:** `not_a_file`, `path_escape`, `io_error`.
 

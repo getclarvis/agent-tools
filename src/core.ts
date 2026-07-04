@@ -50,7 +50,7 @@ export interface ToolInfo {
 }
 
 export function listTools(config: ServerConfig): ToolInfo[] {
-  return selectSurface(config.readOnly).map((t) => ({
+  return selectSurface(config.readOnly, config.treeSitterAvailable).map((t) => ({
     name: t.name,
     description: t.description,
     inputSchema: t.inputSchema,
@@ -84,7 +84,7 @@ export async function dispatch(
   config: ServerConfig,
   signal?: AbortSignal,
 ): Promise<DispatchResult> {
-  const tool = getTool(name, selectSurface(config.readOnly));
+  const tool = getTool(name, selectSurface(config.readOnly, config.treeSitterAvailable));
   if (!tool) {
     return errorResult(new ToolError("not_found", `Unknown tool: ${name}`));
   }

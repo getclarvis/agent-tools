@@ -61,8 +61,9 @@ for callers that build their own transport.
 Config resolution lives in [`src/config.ts`](https://github.com/getclarvis/agent-tools/blob/main/src/config.ts).
 `resolveConfig` validates the workspace root exists and is a directory, applies the numeric floors
 (`MIN_OUTPUT_BYTES` / `MIN_FILE_BYTES` = 1024; `bashTimeoutMaxMs >= bashTimeoutMs`), probes for
-ripgrep once (`spawnSync("rg", ["--version"])`, overridable via `options.probeRipgrep`), and returns
-a `ServerConfig`. `buildConfig(argv, env)` is the argv/env front-end (for a CLI or long-running
+ripgrep once (`spawnSync("rg", ["--version"])`, overridable via `options.probeRipgrep`) and for the
+optional `@vscode/tree-sitter-wasm` peer once (module resolution, overridable via
+`options.probeTreeSitter`), and returns a `ServerConfig`. `buildConfig(argv, env)` is the argv/env front-end (for a CLI or long-running
 service) that parses `--workspace` / `WORKSPACE_ROOT`, `READ_ONLY`, `ALLOW_OUTSIDE_WORKSPACE`, and
 the byte/timeout vars, then delegates to `resolveConfig`. Bad input throws `StartupError`. See
 [internals/config.md](./internals/config.md).
@@ -72,9 +73,11 @@ the byte/timeout vars, then delegates to `resolveConfig`. Bad input throws `Star
 The whole request path is [`dispatch`](https://github.com/getclarvis/agent-tools/blob/main/src/core.ts)
 — under 30 lines, and the only place a tool result is shaped:
 
-1. **Resolve the tool** against the active surface: `getTool(name, selectSurface(config.readOnly))`.
-   A name not on the surface (unknown, or a mutating tool hidden by read-only mode) returns
-   `not_found` — read-only hiding is indistinguishable from "does not exist" on purpose.
+1. **Resolve the tool** against the active surface:
+   `getTool(name, selectSurface(config.readOnly, config.treeSitterAvailable))`. A name not on the
+   surface (unknown, a mutating tool hidden by read-only mode, or a syntax tool hidden because the
+   tree-sitter peer is absent) returns `not_found` — hiding is indistinguishable from "does not
+   exist" on purpose.
 2. **Validate** with the tool's precompiled ajv validator (`ajv` is `new Ajv({ allErrors: true,
    useDefaults: true })`; one validator per tool is compiled at module load). On failure the joined
    `errorsText` becomes an `invalid_input` envelope.
@@ -91,10 +94,12 @@ See [internals/dispatch.md](./internals/dispatch.md).
 ## The tool surface
 
 The registry ([`src/tools/registry.ts`](https://github.com/getclarvis/agent-tools/blob/main/src/tools/registry.ts))
-is two ordered arrays of `ToolDef` and three helpers. `tools` is the full twenty; `readOnlyTools` is
-the non-mutating seven (`read_file`, `read_image`, `list_dir`, `glob`, `grep`, `file_stat`, `tree`);
-`selectSurface(readOnly)` picks
-between them, `getTool` finds by name within a surface. `listTools(config)` maps the active surface
+is two ordered arrays of `ToolDef` and three helpers. `tools` is the full twenty-two;
+`readOnlyTools` is the non-mutating nine (`read_file`, `read_image`, `list_dir`, `glob`, `grep`,
+`file_stat`, `tree`, `outline`, `check_syntax`);
+`selectSurface(readOnly, treeSitterAvailable?)` picks between them (and filters
+`outline`/`check_syntax` out when the tree-sitter peer is absent), `getTool` finds by name within a
+surface. `listTools(config)` maps the active surface
 to the `{ name, description, inputSchema }[]` you advertise to a model. A `ToolDef`
 ([types.ts](https://github.com/getclarvis/agent-tools/blob/main/src/tools/types.ts)) is just a name,
 description, JSON Schema, optional `bounded` flag, and an async `handler`. See

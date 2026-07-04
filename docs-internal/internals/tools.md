@@ -1,6 +1,6 @@
 # Internals: the tool registry & handlers
 
-Source-level reference for the twenty tool handlers and how they're registered. The user-facing tool
+Source-level reference for the twenty-two tool handlers and how they're registered. The user-facing tool
 contracts live in [`SPEC.md`](../../SPEC.md) and the published
 [tools reference](https://agent-tools.clarvis.dev/reference/tools); this page maps each tool to its
 `src/` module and the `lib/` primitives it leans on.
@@ -34,15 +34,17 @@ The handler always returns a `string`. Where a tool has structured output (`bash
 export const tools: ToolDef[] = [readFile, readImage, writeFile, editFile, multiEdit,
                                  applyPatchTool, listDir, globTool, grep, bash,
                                  monitorStart, monitorPoll, monitorStop, monitorList,
-                                 move, copy, mkdir, remove, fileStat, tree];
+                                 move, copy, mkdir, remove, fileStat, tree,
+                                 outline, checkSyntax];
 export const readOnlyTools: ToolDef[] = [readFile, readImage, listDir, globTool, grep,
-                                         fileStat, tree];
+                                         fileStat, tree, outline, checkSyntax];
 ```
 
-`selectSurface(readOnly)` returns one or the other; `getTool(name, surface)` is a `find` by name.
-Order in `tools` is the order `listTools` advertises them.
+`selectSurface(readOnly, treeSitterAvailable = true)` returns one or the other, filtering
+`outline`/`check_syntax` out of either when the tree-sitter peer is absent; `getTool(name, surface)`
+is a `find` by name. Order in `tools` is the order `listTools` advertises them.
 
-## The twenty tools
+## The twenty-two tools
 
 | Tool | Module | Mutating | Key `lib/` primitives |
 |---|---|---|---|
@@ -53,10 +55,12 @@ Order in `tools` is the order `listTools` advertises them.
 | `grep` | `grep.ts` | no | `grepSearch` (ripgrep or in-process) — see [internals/search.md](./search.md) |
 | `file_stat` | `file-stat.ts` | no | `resolvePath` · `lstat` · head read + `isBinary` · `sniffImageMime` → JSON |
 | `tree` | `tree.ts` | no | `resolvePath` · `statDirectory` · `readdir` + `mapLimit` · `loadIgnore` · not-followed symlinks |
-| `write_file` | `write-file.ts` | yes | `resolvePath` · `writeAtomic` (+ `withFileLock`) |
-| `edit_file` | `edit-file.ts` | yes | `readTextFile` · `findCascadeMatch` · `reencode` · `writeAtomic` |
+| `outline` | `outline.ts` | no | `resolvePath` · `readTextFile` · `parseText` (lib/treesitter) · `extractOutline` (lib/outline-spec) |
+| `check_syntax` | `check-syntax.ts` | no | `resolvePath` · `readTextFile` · `checkSyntaxText` (lib/treesitter) → JSON |
+| `write_file` | `write-file.ts` | yes | `resolvePath` · `writeAtomic` (+ `withFileLock`) · `syntaxWarning` |
+| `edit_file` | `edit-file.ts` | yes | `readTextFile` · `findCascadeMatch` · `reencode` · `writeAtomic` · `syntaxWarning` |
 | `multi_edit` | `multi-edit.ts` | yes | same as `edit_file`, applied sequentially under one lock, atomic |
-| `apply_patch` | `apply-patch.ts` | yes | `diff` parse → `FileOp[]` · `applyOpsAtomic` (multi-file rollback) |
+| `apply_patch` | `apply-patch.ts` | yes | `diff` parse → `FileOp[]` · `applyOpsAtomic` (multi-file rollback) · `syntaxWarnings` |
 | `move` | `move.ts` | yes | `withFileLocks` · `assertNotSymlink` · `rename` (+ `fsyncDir`) |
 | `copy` | `copy.ts` | yes | `withFileLocks` · `assertNotSymlink` · temp `copyFile` + `rename` (+ `fsyncDir`) |
 | `mkdir` | `mkdir.ts` | yes | `resolvePath` · `mkdir` recursive |
@@ -68,7 +72,9 @@ Order in `tools` is the order `listTools` advertises them.
 | `monitor_list` | `monitor.ts` | yes | enumerates every monitor's sidecars, newest first |
 
 - **Read-only surface** is exactly `read_file`, `read_image`, `list_dir`, `glob`, `grep`, `file_stat`,
-  `tree`. Everything else is hidden under `readOnly: true` and returns `not_found`.
+  `tree`, `outline`, `check_syntax`. Everything else is hidden under `readOnly: true` and returns
+  `not_found`. `outline`/`check_syntax` are additionally hidden (on both surfaces) when
+  `config.treeSitterAvailable` is false — the optional `@vscode/tree-sitter-wasm` peer is absent.
 - **`bash` is the only `bounded: true` tool** — it splits `maxOutputBytes` across stdout/stderr with
   `allocateBudget` and spills overflow, so it opts out of `dispatch`'s outer `bound()`. See
   [internals/output-and-spill.md](./output-and-spill.md).

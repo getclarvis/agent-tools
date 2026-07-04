@@ -94,3 +94,53 @@ describe("write_file", () => {
     });
   });
 });
+
+describe("write_file syntax annotation", () => {
+  let root: string;
+  let config: ServerConfig;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+    config = makeConfig(root, { treeSitterAvailable: true });
+  });
+  afterEach(() => cleanup(root));
+
+  it("appends a warning after the success line when the content does not parse", async () => {
+    const r = await callTool(
+      "write_file",
+      { path: "broken.ts", content: "const x = = 1;\n" },
+      config,
+    );
+    expect(r.isError).toBe(false);
+    expect(r.text.startsWith("Wrote 15 bytes to broken.ts (created).")).toBe(true);
+    expect(r.text).toContain("warning: typescript syntax error in broken.ts at line 1");
+    expect(r.text).toContain("run check_syntax for details.");
+  });
+
+  it("stays silent for valid content", async () => {
+    const r = await callTool("write_file", { path: "ok.ts", content: "const x = 1;\n" }, config);
+    expect(r.text).not.toContain("warning:");
+  });
+
+  it("stays silent for files without a grammar", async () => {
+    const r = await callTool(
+      "write_file",
+      { path: "notes.txt", content: "const x = = 1;\n" },
+      config,
+    );
+    expect(r.text).not.toContain("warning:");
+  });
+
+  it("stays silent when tree-sitter is unavailable", async () => {
+    const off = makeConfig(root);
+    const r = await callTool("write_file", { path: "broken.ts", content: "const x = = 1;\n" }, off);
+    expect(r.text).not.toContain("warning:");
+  });
+
+  it("skips oversized content silently", async () => {
+    const big = `const x = = 1;\n${"// pad\n".repeat(160_000)}`;
+    const r = await callTool("write_file", { path: "big.ts", content: big }, config);
+    expect(r.isError).toBe(false);
+    expect(r.text).not.toContain("warning:");
+  });
+});

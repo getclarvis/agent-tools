@@ -4,6 +4,7 @@ import { writeAtomic, withFileLock } from "../lib/atomic.js";
 import { reencode } from "../lib/text.js";
 import { readTextFile } from "../lib/textfile.js";
 import { findCascadeMatch, scanLineBlocks, trimEnds } from "../lib/match-cascade.js";
+import { syntaxWarning } from "../lib/syntax-annotate.js";
 import type { ServerConfig } from "../config.js";
 import type { ToolDef } from "./types.js";
 
@@ -26,7 +27,8 @@ export async function editFileLocked(
     }
     const newText = transform(decoded.content);
     await writeAtomic(target, reencode(newText, decoded));
-    return message(displayPath(target, config.workspaceRoot));
+    const rel = displayPath(target, config.workspaceRoot);
+    return message(rel) + (await syntaxWarning(rel, newText, config));
   });
 }
 

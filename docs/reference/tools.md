@@ -1,8 +1,11 @@
 # The tools
 
-> The twenty tools, their inputs, outputs, and error codes. Seven are available in read-only mode;
-> the other thirteen require the full surface. In [read-only mode](/guide/read-only-mode) only the read
-> tools are registered. This mirrors the canonical
+> The twenty-two tools, their inputs, outputs, and error codes. Nine are available in read-only
+> mode; the other thirteen require the full surface. In [read-only mode](/guide/read-only-mode) only
+> the read tools are registered. `outline` and `check_syntax` additionally require the optional
+> [`@vscode/tree-sitter-wasm`](https://www.npmjs.com/package/@vscode/tree-sitter-wasm) peer
+> dependency (`npm i @vscode/tree-sitter-wasm`) — without it they are hidden from both surfaces.
+> This mirrors the canonical
 > [`SPEC.md`](https://github.com/getclarvis/agent-tools/blob/main/SPEC.md) in the repo.
 
 | Tool                          | Mutating | Summary                                                            |
@@ -14,6 +17,8 @@
 | [`grep`](#grep)               | no       | Search file contents by regular expression (optionally multiline). |
 | [`file_stat`](#file_stat)     | no       | Structured metadata for a path (type, size, mtime, mode) as JSON.  |
 | [`tree`](#tree)               | no       | Print a directory as an indented, gitignore-aware tree.            |
+| [`outline`](#outline)         | no       | Symbol skeleton of a source file with line ranges (tree-sitter).   |
+| [`check_syntax`](#check_syntax) | no     | Parse a source file and report syntax errors (tree-sitter).        |
 | [`write_file`](#write_file)   | yes      | Create or overwrite a file (atomic).                               |
 | [`edit_file`](#edit_file)     | yes      | Replace one exact occurrence of a string in a file.                |
 | [`multi_edit`](#multi_edit)   | yes      | Apply several `edit_file`-style edits to one file atomically.      |
@@ -155,6 +160,55 @@ directory prints a `(no entries)` line.
 
 **Errors.** `not_found`, `not_a_file` (path is a file), `path_escape`, `io_error`.
 
+## outline
+
+Return the symbol skeleton of one source file — classes, functions, methods and other declarations
+as indented lines with 1-based `(start-end)` line ranges. Use it to understand an unfamiliar file
+cheaply, then read only the relevant ranges with `read_file`. Requires the optional
+`@vscode/tree-sitter-wasm` peer dependency.
+
+| Input  | Type   | Required | Default | Notes                    |
+| ------ | ------ | -------- | ------- | ------------------------ |
+| `path` | string | yes      | —       | Source file to outline.  |
+
+**Output.** A header line `<path> — <language>, <N> lines`, then one indented line per symbol
+(two spaces per nesting level): the declaration's first source line (trimmed, truncated) followed by
+its `(start-end)` line range. A file with no symbols prints `(no symbols found)`. Output is capped
+at 2000 symbols (a trailing `[... N more symbols omitted ...]` line reports the rest) and
+byte-bounded like `read_file`. If the file has syntax errors the outline is still produced, with a
+trailing `note:` pointing at `check_syntax`.
+
+The language is picked by file extension: typescript (`.ts`/`.mts`/`.cts`), tsx, javascript
+(`.js`/`.mjs`/`.cjs`/`.jsx`), python, go, rust, java, and c-sharp. Other extensions — including ones
+`check_syntax` supports — are `invalid_input`.
+
+**Errors.** `invalid_input` (unsupported extension), `not_found`, `not_a_file`, `is_binary`,
+`too_large` (input over `MAX_FILE_BYTES` or the 2 MB parse limit), `path_escape`, `timeout`,
+`aborted`, `io_error`.
+
+## check_syntax
+
+Parse one source file with tree-sitter and report syntax errors — the parser's `ERROR` and
+`MISSING` nodes — as JSON. A pure parse check: it does **not** type-check, resolve imports, or
+lint; `ok: true` means the file parses, not that it compiles. Requires the optional
+`@vscode/tree-sitter-wasm` peer dependency.
+
+| Input  | Type   | Required | Default | Notes                  |
+| ------ | ------ | -------- | ------- | ---------------------- |
+| `path` | string | yes      | —       | Source file to check.  |
+
+**Output.** A JSON object `{ path, language, ok, errors, error_count, truncated }` where each entry
+of `errors` is `{ kind, line, column, near }` — `kind` is `error` (stray/unparseable input, `near`
+is the source line) or `missing` (a token the parser expected, `near` is that token), and
+`line`/`column` are 1-based. At most 50 errors are reported (`truncated: true` beyond that).
+
+The language is picked by file extension; every bundled grammar is supported: the eight `outline`
+languages plus ruby, php, bash, css, ini, powershell, and c/cpp (both routed to the cpp grammar).
+
+**Errors.** `invalid_input` (unsupported extension), `not_found`, `not_a_file`, `is_binary`,
+`too_large` (input over `MAX_FILE_BYTES` or the 2 MB parse limit), `path_escape`, `timeout`,
+`aborted`, `io_error`.
+
 ## write_file
 
 Create or overwrite a file with the given content (atomic: temp file + `rename`).
@@ -166,6 +220,14 @@ Create or overwrite a file with the given content (atomic: temp file + `rename`)
 
 **Output.** A success message with the byte count and whether the file was created or overwritten.
 Parent directories must already exist.
+
+**Syntax warning.** When the optional `@vscode/tree-sitter-wasm` peer dependency is installed and
+the file's extension has a grammar (see [`check_syntax`](#check_syntax)), the success message of
+`write_file`, `edit_file`, `multi_edit`, and `apply_patch` gains a trailing
+`warning: <language> syntax error in <file> at line N, column C ...` line when the written content
+does not parse. Advisory only: the write always succeeds, the warning never becomes an error, and
+files without a grammar, oversized content (> 1 MB), or a slow parse are silently skipped
+(`apply_patch` checks at most five files per patch).
 
 **Errors.** `not_found` (missing parent), `not_a_file`, `path_escape`, `io_error`.
 
@@ -185,7 +247,8 @@ Replace one occurrence of `old_string` with `new_string`.
 **whitespace-tolerant cascade** runs — strictest→loosest: indentation-flexible, per-line-trimmed,
 all-whitespace-collapsed, then trimmed-substring. It applies **only if it resolves to exactly one
 region** (otherwise `ambiguous_match`, never a guess), and the success message discloses that a
-tolerant match was used. Line endings and BOM are preserved.
+tolerant match was used. Line endings and BOM are preserved. The result may carry a
+[syntax warning](#write_file).
 
 **Errors.** `no_match`, `ambiguous_match`, `invalid_input` (identical strings), `not_found`,
 `is_binary`, `too_large`, `path_escape`.
@@ -201,7 +264,8 @@ Apply several `edit_file`-style edits to ONE file in a single atomic call.
 
 **Behavior.** Edits run in order, each operating on the result of the previous, and each inherits
 `edit_file`'s exact-then-tolerant matching. The whole batch is applied atomically; any failing edit
-aborts the call — nothing is written — and the error names the failing edit index.
+aborts the call — nothing is written — and the error names the failing edit index. The result may
+carry a [syntax warning](#write_file).
 
 **Errors.** As [`edit_file`](#edit_file), prefixed with the failing edit index.
 
@@ -218,7 +282,8 @@ block whose old and new paths differ is a rename/move (with hunks it moves and e
 without them it is a pure rename that preserves the exact bytes). Each file block is validated and
 applied; all changes commit together or roll back together. Creating an existing path, renaming onto
 an existing destination, or naming the same path twice is rejected. Modified files preserve line
-endings and BOM; created files use LF.
+endings and BOM; created files use LF. The result may carry [syntax warnings](#write_file) for up
+to five written files.
 
 **Errors.** `patch_failed` (a hunk did not apply; names the file), `invalid_input`, `not_found`,
 `not_a_file`, `is_binary`, `too_large`, `path_escape`, `io_error`.

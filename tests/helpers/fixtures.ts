@@ -42,6 +42,7 @@ export function makeConfig(root: string, overrides: Partial<ServerConfig> = {}):
     monitorReadyTimeoutMs: DEFAULT_MONITOR_READY_TIMEOUT_MS,
     maxMonitors: DEFAULT_MAX_MONITORS,
     ripgrepAvailable: false,
+    treeSitterAvailable: false,
     readOnly: false,
     confineToWorkspace: true,
     ...overrides,

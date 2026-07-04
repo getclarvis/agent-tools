@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import { ToolError, fsError } from "../errors.js";
 import { resolvePath, displayPath } from "../lib/paths.js";
 import { writeAtomic, withFileLock } from "../lib/atomic.js";
+import { syntaxWarning } from "../lib/syntax-annotate.js";
 import type { ToolDef } from "./types.js";
 
 export const writeFile: ToolDef = {
@@ -56,7 +57,10 @@ export const writeFile: ToolDef = {
 
       const bytes = Buffer.byteLength(content, "utf8");
       const rel = displayPath(target, config.workspaceRoot);
-      return `Wrote ${bytes} bytes to ${rel} (${existed ? "overwritten" : "created"}).`;
+      return (
+        `Wrote ${bytes} bytes to ${rel} (${existed ? "overwritten" : "created"}).` +
+        (await syntaxWarning(rel, content, config))
+      );
     });
   },
 };

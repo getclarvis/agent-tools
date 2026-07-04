@@ -1,7 +1,7 @@
 {
   "name": "@clarvis/agent-tools",
   "version": "0.3.0",
-  "description": "A minimal, opinionated set of coding tools (read/write/edit/patch/move/bash/grep/glob) for driving an LLM agent over a workspace — usable as a plain library.",
+  "description": "A minimal, opinionated set of coding tools for driving an LLM agent over a workspace — read/write/edit/patch/move, grep/glob, bash + background monitors, and tree-sitter-powered outline/check_syntax — usable as a plain library.",
   "license": "MIT",
   "keywords": [
     "llm",
@@ -17,7 +17,9 @@
     "apply-patch",
     "bash",
     "workspace",
-    "typescript"
+    "typescript",
+    "tree-sitter",
+    "syntax"
   ],
   "type": "module",
   "main": "dist/index.js",
@@ -67,8 +69,17 @@
     "ignore": "^7.0.5",
     "tinyglobby": "^0.2.10"
   },
+  "peerDependencies": {
+    "@vscode/tree-sitter-wasm": "^0.3.1"
+  },
+  "peerDependenciesMeta": {
+    "@vscode/tree-sitter-wasm": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@vscode/tree-sitter-wasm": "^0.3.1",
     "@types/node": "^26.1.0",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.62.1",
