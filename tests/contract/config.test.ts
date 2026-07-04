@@ -287,4 +287,25 @@ describe("config", () => {
       expect(typeof cfg.ripgrepAvailable).toBe("boolean");
     });
   });
+
+  describe("tree-sitter probe", () => {
+    it("probes for tree-sitter by default and finds the dev dependency", () => {
+      const cfg = buildConfig(["--workspace", root], {}, noProbe);
+      expect(cfg.treeSitterAvailable).toBe(true);
+    });
+
+    it("honours an injected tree-sitter probe", () => {
+      const cfg = buildConfig(["--workspace", root], {}, noProbe, () => false);
+      expect(cfg.treeSitterAvailable).toBe(false);
+    });
+
+    it("resolveConfig honours options.probeTreeSitter", () => {
+      const cfg = resolveConfig({
+        workspaceRoot: root,
+        probeRipgrep: noProbe,
+        probeTreeSitter: () => false,
+      });
+      expect(cfg.treeSitterAvailable).toBe(false);
+    });
+  });
 });

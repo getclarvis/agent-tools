@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { statSync } from "node:fs";
 import path from "node:path";
+import { probeTreeSitter } from "./lib/treesitter.js";
 import type { Guard, Elicit } from "./guard/types.js";
 
 export interface ServerConfig {
@@ -21,6 +22,8 @@ export interface ServerConfig {
   maxMonitors: number;
 
   ripgrepAvailable: boolean;
+
+  treeSitterAvailable: boolean;
 
   readOnly: boolean;
 
@@ -164,6 +167,8 @@ export interface AgentToolsOptions {
 
   probeRipgrep?: () => boolean;
 
+  probeTreeSitter?: () => boolean;
+
   guard?: Guard;
 
   elicit?: Elicit;
@@ -213,6 +218,7 @@ export function resolveConfig(options: AgentToolsOptions): ServerConfig {
     ),
     maxMonitors: requireMin(options.maxMonitors ?? DEFAULT_MAX_MONITORS, 1, "maxMonitors"),
     ripgrepAvailable: (options.probeRipgrep ?? probeRipgrep)(),
+    treeSitterAvailable: (options.probeTreeSitter ?? probeTreeSitter)(),
     readOnly: options.readOnly ?? false,
     confineToWorkspace: options.confineToWorkspace ?? true,
     guard: options.guard,
@@ -224,6 +230,7 @@ export function buildConfig(
   argv: string[],
   env: NodeJS.ProcessEnv,
   probe: () => boolean = probeRipgrep,
+  probeTS: () => boolean = probeTreeSitter,
 ): ServerConfig {
   const rawRoot = parseWorkspaceArg(argv) ?? env.WORKSPACE_ROOT;
   if (!rawRoot) {
@@ -276,5 +283,6 @@ export function buildConfig(
     readOnly: resolveReadOnly(argv, env),
     confineToWorkspace: resolveConfine(argv, env),
     probeRipgrep: probe,
+    probeTreeSitter: probeTS,
   });
 }
