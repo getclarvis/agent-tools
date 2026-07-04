@@ -4,6 +4,8 @@ import { ToolError, serializeError } from "./errors.js";
 import { bound } from "./lib/output.js";
 import { tools, getTool, selectSurface } from "./tools/registry.js";
 import { textPart, type ContentPart } from "./tools/content.js";
+import { buildGuardContext } from "./guard/context.js";
+import type { ElicitRequest } from "./guard/types.js";
 import type { ServerConfig } from "./config.js";
 
 interface AjvInstance {
@@ -55,6 +57,27 @@ export function listTools(config: ServerConfig): ToolInfo[] {
   }));
 }
 
+async function applyGuard(
+  name: string,
+  args: Record<string, unknown>,
+  config: ServerConfig,
+): Promise<DispatchResult | null> {
+  if (!config.guard) return null;
+  try {
+    const ctx = buildGuardContext(name, args, config);
+    const decision = await config.guard(ctx);
+    if (decision.verdict === "allow") return null;
+    const reason = decision.reason ?? "blocked by guard";
+    if (decision.verdict === "deny") return errorResult(new ToolError("denied", reason));
+    if (!config.elicit) return errorResult(new ToolError("denied", reason));
+    const req: ElicitRequest = { tool: name, args, reason: decision.reason, bash: ctx.bash };
+    const allowed = await config.elicit(req);
+    return allowed ? null : errorResult(new ToolError("denied", reason));
+  } catch (err) {
+    return errorResult(err);
+  }
+}
+
 export async function dispatch(
   name: string,
   args: Record<string, unknown>,
@@ -72,6 +95,9 @@ export async function dispatch(
     const detail = ajv.errorsText(validate.errors, { separator: "; " });
     return errorResult(new ToolError("invalid_input", detail || "invalid arguments"));
   }
+
+  const gate = await applyGuard(name, filled, config);
+  if (gate) return gate;
 
   try {
     const out = await tool.handler(filled, config, signal);
