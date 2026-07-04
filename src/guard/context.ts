@@ -44,6 +44,18 @@ export function buildGuardContext(
   } else if (SRC_DEST_TOOLS.has(tool)) {
     if (typeof args.source === "string") paths.push(resolveCandidate(args.source, root));
     if (typeof args.destination === "string") paths.push(resolveCandidate(args.destination, root));
+  } else if (tool === "read_files") {
+    if (Array.isArray(args.paths)) {
+      for (const p of args.paths) {
+        if (typeof p === "string") paths.push(resolveCandidate(p, root));
+      }
+    }
+  } else if (tool === "diff") {
+    if (typeof args.from === "string") paths.push(resolveCandidate(args.from, root));
+    if (typeof args.to === "string") paths.push(resolveCandidate(args.to, root));
+  } else if (tool === "replace") {
+    const scope = typeof args.path === "string" && args.path.length > 0 ? args.path : ".";
+    paths.push(resolveCandidate(scope, root));
   } else if (PATH_ARG_TOOLS.has(tool)) {
     if (typeof args.path === "string") paths.push(resolveCandidate(args.path, root));
   }

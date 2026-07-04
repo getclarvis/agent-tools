@@ -1,12 +1,15 @@
 import { readFile } from "./read-file.js";
 import { readImage } from "./read-image.js";
+import { readFiles } from "./read-files.js";
 import { writeFile } from "./write-file.js";
 import { editFile } from "./edit-file.js";
 import { multiEdit } from "./multi-edit.js";
 import { applyPatchTool } from "./apply-patch.js";
+import { replace } from "./replace.js";
 import { listDir } from "./list-dir.js";
 import { globTool } from "./glob.js";
 import { grep } from "./grep.js";
+import { diffTool } from "./diff.js";
 import { bash } from "./bash.js";
 import { monitorStart, monitorPoll, monitorStop, monitorList } from "./monitor.js";
 import { move } from "./move.js";
@@ -22,13 +25,16 @@ import type { ToolDef } from "./types.js";
 export const tools: ToolDef[] = [
   readFile,
   readImage,
+  readFiles,
   writeFile,
   editFile,
   multiEdit,
   applyPatchTool,
+  replace,
   listDir,
   globTool,
   grep,
+  diffTool,
   bash,
   monitorStart,
   monitorPoll,
@@ -47,9 +53,11 @@ export const tools: ToolDef[] = [
 export const readOnlyTools: ToolDef[] = [
   readFile,
   readImage,
+  readFiles,
   listDir,
   globTool,
   grep,
+  diffTool,
   fileStat,
   tree,
   outline,

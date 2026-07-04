@@ -68,9 +68,9 @@ node --input-type=module -e "
 "
 ```
 
-- [ ] The library imports, `listTools()` returns the twenty-two tools (twenty without the
+- [ ] The library imports, `listTools()` returns the twenty-five tools (twenty-three without the
       `@vscode/tree-sitter-wasm` dev/peer dependency installed), and a `read_file`/`list_dir` call
-      returns a bounded result. In read-only mode only the nine read tools appear.
+      returns a bounded result. In read-only mode only the eleven read tools appear.
 
 ## 6. Publish
 

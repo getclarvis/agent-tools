@@ -22,13 +22,13 @@ describe("surface without tree-sitter", () => {
   it("hides outline and check_syntax from the full surface", () => {
     const names = listTools(makeConfig(root)).map((t) => t.name);
     for (const tool of SYNTAX_TOOLS) expect(names, tool).not.toContain(tool);
-    expect(names).toHaveLength(20);
+    expect(names).toHaveLength(23);
   });
 
   it("hides them from the read-only surface too", () => {
     const names = listTools(makeConfig(root, { readOnly: true })).map((t) => t.name);
     for (const tool of SYNTAX_TOOLS) expect(names, tool).not.toContain(tool);
-    expect(names).toHaveLength(7);
+    expect(names).toHaveLength(9);
   });
 
   it("dispatching them is indistinguishable from an unknown tool", async () => {
@@ -65,7 +65,7 @@ describe("surface without tree-sitter", () => {
       expect(full, tool).toContain(tool);
       expect(ro, tool).toContain(tool);
     }
-    expect(full).toHaveLength(22);
-    expect(ro).toHaveLength(9);
+    expect(full).toHaveLength(25);
+    expect(ro).toHaveLength(11);
   });
 });

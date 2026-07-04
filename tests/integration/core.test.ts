@@ -21,7 +21,7 @@ describe("core / registry", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("exposes exactly the twenty-two fixed tools", () => {
+  it("exposes exactly the twenty-five fixed tools", () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -29,6 +29,7 @@ describe("core / registry", () => {
         "bash",
         "check_syntax",
         "copy",
+        "diff",
         "edit_file",
         "file_stat",
         "glob",
@@ -43,8 +44,10 @@ describe("core / registry", () => {
         "multi_edit",
         "outline",
         "read_file",
+        "read_files",
         "read_image",
         "remove",
+        "replace",
         "tree",
         "write_file",
       ].sort(),
@@ -153,11 +156,13 @@ describe("listTools surface", () => {
     const ro = listTools(makeConfig(root, { readOnly: true }));
     const names = ro.map((t) => t.name).sort();
     expect(names).toEqual([
+      "diff",
       "file_stat",
       "glob",
       "grep",
       "list_dir",
       "read_file",
+      "read_files",
       "read_image",
       "tree",
     ]);
@@ -168,12 +173,14 @@ describe("listTools surface", () => {
     const names = ro.map((t) => t.name).sort();
     expect(names).toEqual([
       "check_syntax",
+      "diff",
       "file_stat",
       "glob",
       "grep",
       "list_dir",
       "outline",
       "read_file",
+      "read_files",
       "read_image",
       "tree",
     ]);

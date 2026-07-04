@@ -94,9 +94,9 @@ See [internals/dispatch.md](./internals/dispatch.md).
 ## The tool surface
 
 The registry ([`src/tools/registry.ts`](https://github.com/getclarvis/agent-tools/blob/main/src/tools/registry.ts))
-is two ordered arrays of `ToolDef` and three helpers. `tools` is the full twenty-two;
-`readOnlyTools` is the non-mutating nine (`read_file`, `read_image`, `list_dir`, `glob`, `grep`,
-`file_stat`, `tree`, `outline`, `check_syntax`);
+is two ordered arrays of `ToolDef` and three helpers. `tools` is the full twenty-five;
+`readOnlyTools` is the non-mutating eleven (`read_file`, `read_files`, `read_image`, `list_dir`, `glob`,
+`grep`, `diff`, `file_stat`, `tree`, `outline`, `check_syntax`);
 `selectSurface(readOnly, treeSitterAvailable?)` picks between them (and filters
 `outline`/`check_syntax` out when the tree-sitter peer is absent), `getTool` finds by name within a
 surface. `listTools(config)` maps the active surface

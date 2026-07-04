@@ -1,6 +1,6 @@
 # Getting started
 
-> `@clarvis/agent-tools` is a transport-agnostic library that gives an LLM agent twenty-two coding tools
+> `@clarvis/agent-tools` is a transport-agnostic library that gives an LLM agent twenty-five coding tools
 > over a workspace. You give it a workspace root; it gives you a validated, bounded, workspace-confined
 > surface you can advertise to a model and call. This page takes you from install to a first read and
 > a first edit.
@@ -31,10 +31,11 @@ const tools = createAgentTools({ workspaceRoot: process.cwd() });
 // The surface to advertise to your model: name / description / JSON Schema per tool.
 const surface = tools.listTools();
 console.log(surface.map((t) => t.name));
-// [ 'read_file', 'read_image', 'list_dir', 'glob', 'grep',
-//   'write_file', 'edit_file', 'multi_edit', 'apply_patch', 'bash',
-//   'monitor_start', 'monitor_poll', 'monitor_stop', 'monitor_list',
+// [ 'read_file', 'read_image', 'read_files', 'write_file', 'edit_file',
+//   'multi_edit', 'apply_patch', 'replace', 'list_dir', 'glob', 'grep', 'diff',
+//   'bash', 'monitor_start', 'monitor_poll', 'monitor_stop', 'monitor_list',
 //   'move', 'copy', 'mkdir', 'remove', 'file_stat', 'tree' ]
+// (outline / check_syntax also appear when @vscode/tree-sitter-wasm is installed)
 ```
 
 Each entry of `listTools()` is `{ name, description, inputSchema }`, where `inputSchema` is a JSON

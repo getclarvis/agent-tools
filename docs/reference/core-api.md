@@ -33,8 +33,8 @@ The advertised surface for `config` — `{ name, description, inputSchema }` per
 ## The registry
 
 ```ts
-const tools: ToolDef[]; // all twenty-two
-const readOnlyTools: ToolDef[]; // read_file, read_image, list_dir, glob, grep, file_stat, tree, outline, check_syntax
+const tools: ToolDef[]; // all twenty-five
+const readOnlyTools: ToolDef[]; // read_file, read_files, read_image, list_dir, glob, grep, diff, file_stat, tree, outline, check_syntax
 
 function selectSurface(readOnly: boolean, treeSitterAvailable?: boolean): ToolDef[];
 function getTool(name: string, surface?: ToolDef[]): ToolDef | undefined;

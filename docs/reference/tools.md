@@ -1,7 +1,7 @@
 # The tools
 
-> The twenty-two tools, their inputs, outputs, and error codes. Nine are available in read-only
-> mode; the other thirteen require the full surface. In [read-only mode](/guide/read-only-mode) only
+> The twenty-five tools, their inputs, outputs, and error codes. Eleven are available in read-only
+> mode; the other fourteen require the full surface. In [read-only mode](/guide/read-only-mode) only
 > the read tools are registered. `outline` and `check_syntax` additionally require the optional
 > [`@vscode/tree-sitter-wasm`](https://www.npmjs.com/package/@vscode/tree-sitter-wasm) peer
 > dependency (`npm i @vscode/tree-sitter-wasm`) — without it they are hidden from both surfaces.
@@ -11,10 +11,12 @@
 | Tool                          | Mutating | Summary                                                            |
 | ----------------------------- | -------- | ------------------------------------------------------------------ |
 | [`read_file`](#read_file)     | no       | Read a text file (UTF-8/UTF-16), with line numbers, paging, tail.  |
+| [`read_files`](#read_files)   | no       | Read several text files in one call, each under a numbered header.  |
 | [`read_image`](#read_image)   | no       | Read an image (PNG/JPEG/GIF/WebP) as a base64 image part.          |
 | [`list_dir`](#list_dir)       | no       | List the entries of a directory.                                   |
 | [`glob`](#glob)               | no       | Find files by glob, most-recently-modified first.                  |
 | [`grep`](#grep)               | no       | Search file contents by regular expression (optionally multiline). |
+| [`diff`](#diff)               | no       | Unified diff between two text files, without git.                  |
 | [`file_stat`](#file_stat)     | no       | Structured metadata for a path (type, size, mtime, mode) as JSON.  |
 | [`tree`](#tree)               | no       | Print a directory as an indented, gitignore-aware tree.            |
 | [`outline`](#outline)         | no       | Symbol skeleton of a source file with line ranges (tree-sitter).   |
@@ -23,6 +25,7 @@
 | [`edit_file`](#edit_file)     | yes      | Replace one exact occurrence of a string in a file.                |
 | [`multi_edit`](#multi_edit)   | yes      | Apply several `edit_file`-style edits to one file atomically.      |
 | [`apply_patch`](#apply_patch) | yes      | Apply a unified diff (modify/create/delete/rename) atomically.     |
+| [`replace`](#replace)         | yes      | Project-wide regex find/replace with a dry-run preview (atomic).   |
 | [`move`](#move)               | yes      | Move/rename one file (atomic).                                     |
 | [`copy`](#copy)               | yes      | Copy one file, binary-safe (atomic).                              |
 | [`mkdir`](#mkdir)             | yes      | Create a directory and missing parents.                           |
@@ -54,6 +57,26 @@ hint with the next `offset` is appended.
 
 **Errors.** `not_found`, `not_a_file`, `is_binary`, `too_large`, `path_escape`, `invalid_input`
 (offset `0`, or a positive offset past EOF).
+
+## read_files
+
+Read a batch of text files in one call — use it instead of many `read_file` calls when you already
+know the paths. Each file's content is rendered exactly like `read_file` (numbered lines) under a
+`==> <path> <==` header.
+
+| Input   | Type       | Required | Default | Notes                                                    |
+| ------- | ---------- | -------- | ------- | -------------------------------------------------------- |
+| `paths` | string[]   | yes      | —       | 1–64 files to read, in order. Each relative or absolute. |
+
+**Output.** One section per path. A readable file appears under `==> <path> <==` with numbered
+lines (`(empty file)` for an empty one). A path that fails — missing, binary, a directory, oversized,
+or escaping — becomes a single `==> <path> — <code>: <message> <==` line **without failing the
+others**. The combined output is capped by `maxOutputBytes`: a large file is line-truncated, and once
+the budget is exhausted the remaining files are dropped with a `[... N more file(s) not shown ...]`
+marker (call again with fewer paths).
+
+**Errors.** `invalid_input` only (empty array, more than 64 paths, wrong types). Per-file problems are
+reported inline, not as a tool error.
 
 ## read_image
 
@@ -126,6 +149,22 @@ footer reports state honestly (`showing A..B of N; call again with offset=B for 
 the scan was **incomplete** when it was cut off by the output cap.
 
 **Errors.** `not_found`, `path_escape`, `invalid_input` (bad regex).
+
+## diff
+
+Compare two text files and return a standard unified diff — no git required. Both files are read and
+their line endings normalized to LF before comparison, so a pure CRLF-vs-LF difference reports no
+change.
+
+| Input  | Type   | Required | Default | Notes                          |
+| ------ | ------ | -------- | ------- | ------------------------------ |
+| `from` | string | yes      | —       | The original (left) file.      |
+| `to`   | string | yes      | —       | The changed (right) file.      |
+
+**Output.** A unified diff (`--- from`, `+++ to`, `@@` hunks). Identical content returns
+`(no differences)`. The diff is bounded by `maxOutputBytes` (a huge diff is truncated with a marker).
+
+**Errors.** `not_found`, `not_a_file`, `is_binary`, `too_large`, `path_escape` (for either operand).
 
 ## file_stat
 
@@ -287,6 +326,36 @@ to five written files.
 
 **Errors.** `patch_failed` (a hunk did not apply; names the file), `invalid_input`, `not_found`,
 `not_a_file`, `is_binary`, `too_large`, `path_escape`, `io_error`.
+
+## replace
+
+Project-wide find/replace, preview-first. `pattern` is a **regular expression** (same engine as
+`grep`); `replacement` may reference capture groups (`$1`..`$9`), the whole match (`$&`), or a literal
+`$` (`$$`). Scope with `path` (a file or directory) and/or `glob`; at least one is required. Ignored
+files (`.gitignore`), binary files, and oversized files are skipped. It replaces the `sed -i`-via-`bash`
+pattern with a workspace-confined, guardable, atomic operation.
+
+| Input         | Type    | Required | Default | Notes                                                            |
+| ------------- | ------- | -------- | ------- | ---------------------------------------------------------------- |
+| `pattern`     | string  | yes      | —       | Regular expression to match.                                     |
+| `replacement` | string  | yes      | —       | Replacement text; `$1`..`$9`/`$&` capture refs, `$$` for `$`.    |
+| `path`        | string  | no\*     | —       | File or directory to scope to (a directory is walked).           |
+| `glob`        | string  | no\*     | —       | Glob filtering files under the scope (`**/*.ts`; bare = any dir).|
+| `ignore_case` | boolean | no       | `false` | Case-insensitive matching (`i` flag).                            |
+| `multiline`   | boolean | no       | `false` | Match across lines and let `.` span newlines (`m`+`s` flags).    |
+| `dry_run`     | boolean | no       | `true`  | Preview only; set `false` to apply.                              |
+
+\* At least one of `path` / `glob` is required.
+
+**Output.** With `dry_run: true` (the default): a totals line (`N replacement(s) across M file(s)`)
+followed by a unified-diff preview per changed file — **nothing is written**. With `dry_run: false`:
+the edits are applied atomically (all files succeed or none do, each file's line endings and BOM
+preserved) and a per-file summary is returned, possibly carrying [syntax warnings](#write_file) for up
+to five files. No matches yields `(no matches)`.
+
+**Errors.** `invalid_input` (bad regex, a pattern matching the empty string, or neither `path` nor
+`glob`), `not_found` (a missing explicit `path`), `path_escape`, `io_error`. Writing through a symlink
+is refused (`invalid_input`).
 
 ## move
 

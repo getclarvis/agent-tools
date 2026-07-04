@@ -40,7 +40,7 @@ global state. A bad config fails fast, synchronously, with a `StartupError`. See
 ## The surface
 
 `selectSurface(config.readOnly, config.treeSitterAvailable)` decides which tools exist: all
-twenty-two, or just the nine read tools in [read-only mode](/guide/read-only-mode) — and on either
+twenty-five, or just the eleven read tools in [read-only mode](/guide/read-only-mode) — and on either
 surface, `outline`/`check_syntax` only when the optional tree-sitter peer dependency is installed.
 Both `listTools` (what you advertise) and `dispatch` (what you can call) go through it, so the
 advertised surface and the callable surface are always the same set — there is no separate
