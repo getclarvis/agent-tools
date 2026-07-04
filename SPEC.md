@@ -52,8 +52,8 @@ security model, see [README.md](./README.md).
 
 ## Read-only surface
 
-In `--read-only` mode only `read_file`, `read_image`, `list_dir`, `glob`, and `grep`
-are exposed; the mutating tools are not registered.
+In `--read-only` mode only `read_file`, `read_image`, `list_dir`, `glob`, `grep`,
+`file_stat`, and `tree` are exposed; the mutating tools are not registered.
 
 ---
 
@@ -160,6 +160,38 @@ offset=B for more`; an `offset` past the end on a complete scan returns
 
 **Errors:** `not_found`, `path_escape`, `invalid_input` (bad regex).
 
+## file_stat
+
+Return structured metadata for one path as a JSON object.
+
+**Input:** `path` (string, required).
+
+**Behavior:** `lstat`s the path (confined to the workspace) and returns one text part holding a JSON
+object `{ path, type, size, mtime, mode, ... }`. `type` is `file`, `directory`, `symlink`, or `other`;
+`mtime` is ISO-8601; `mode` is an octal string (e.g. `"0644"`). A symlink is reported **without being
+followed** and includes `symlink_target`. For a regular file the object also carries `binary` (whether
+the content looks binary) and `mime` (a detected image MIME type, else `null`); only a bounded head
+slice is read, so `file_stat` works on files larger than `MAX_FILE_BYTES`.
+
+**Errors:** `not_found`, `not_a_file` (never — a directory is a valid result), `path_escape`,
+`io_error`.
+
+## tree
+
+Print a directory as an indented tree, recursively.
+
+**Input:** `path` (string, default workspace root); `depth` (integer ≥ 1, max levels below the root;
+omit for unlimited); `respect_gitignore` (boolean, default true).
+
+**Behavior:** Walks the directory depth-first. Directories are rendered with a trailing `/`, symlinks
+with a trailing `@`, and files with a byte size. Entries are ordered directories-first then by name.
+When `respect_gitignore` is true, the full git ignore stack and the `.git/` directory are pruned (same
+policy as `grep`/`glob`). **Symlinked directories are listed but not traversed** (cycle-safe). Output
+is bounded to `MAX_OUTPUT_BYTES` with a truncation marker. An empty or fully-ignored directory prints
+a `(no entries)` line under the root.
+
+**Errors:** `not_found`, `not_a_file` (path is a file), `path_escape`, `io_error`.
+
 ## write_file
 
 Create or overwrite a file with the given content (atomic).
@@ -234,6 +266,62 @@ UTF-8.
 
 **Errors:** `patch_failed` (hunk did not apply; reports the file), `invalid_input`,
 `not_found`, `not_a_file`, `is_binary`, `too_large`, `path_escape`, `io_error`.
+
+## move
+
+Move or rename one file (atomic). Regular files only.
+
+**Input:** `source` (string, required); `destination` (string, required); `overwrite` (boolean,
+default false).
+
+**Behavior:** Resolves and confines both paths and serializes on both. Refuses a symlink at either
+endpoint (`invalid_input`). `source` must exist (`not_found`) and be a regular file — a directory is
+rejected with `not_a_file` (use `bash` for directory moves). If `destination` exists it must be a file
+(`not_a_file` for a directory) and is refused unless `overwrite` is true (`invalid_input`); an
+identical `source`/`destination` is also `invalid_input`. Missing parent directories of the
+destination are created. The move is an atomic `rename` that preserves the file's bytes and permission
+mode.
+
+**Errors:** `not_found`, `not_a_file`, `invalid_input`, `path_escape`, `io_error`.
+
+## copy
+
+Copy one file (atomic, binary-safe). Regular files only.
+
+**Input:** `source` (string, required); `destination` (string, required); `overwrite` (boolean,
+default false).
+
+**Behavior:** Same path resolution, locking, symlink refusal, and existence/overwrite semantics as
+`move`. The copy is published atomically (staged in the destination directory, then renamed into
+place) and copies the bytes exactly (binary-safe), preserving the source's permission mode. Unlike the
+text tools, `copy` imposes no `MAX_FILE_BYTES` limit — it is a streaming copy, not an in-memory read.
+The source is left in place.
+
+**Errors:** `not_found`, `not_a_file`, `invalid_input`, `path_escape`, `io_error`.
+
+## mkdir
+
+Create a directory, including missing parents (`mkdir -p`).
+
+**Input:** `path` (string, required).
+
+**Behavior:** Creates the directory and any missing parent directories. Idempotent — succeeds if the
+directory already exists. A path that already exists as a file, or whose parent component is a file, is
+rejected with `not_a_file`.
+
+**Errors:** `not_a_file`, `path_escape`, `io_error`.
+
+## remove
+
+Delete one file. Regular files only.
+
+**Input:** `path` (string, required).
+
+**Behavior:** Deletes a regular file atomically. A missing path is `not_found`; a directory is
+`not_a_file` (use `bash` for recursive directory removal); a symlink is refused (`invalid_input`,
+the link is not followed).
+
+**Errors:** `not_found`, `not_a_file`, `invalid_input`, `path_escape`, `io_error`.
 
 ## bash
 

@@ -91,8 +91,9 @@ See [internals/dispatch.md](./internals/dispatch.md).
 ## The tool surface
 
 The registry ([`src/tools/registry.ts`](https://github.com/getclarvis/agent-tools/blob/main/src/tools/registry.ts))
-is two ordered arrays of `ToolDef` and three helpers. `tools` is the full nine; `readOnlyTools` is
-the non-mutating four (`read_file`, `list_dir`, `glob`, `grep`); `selectSurface(readOnly)` picks
+is two ordered arrays of `ToolDef` and three helpers. `tools` is the full twenty; `readOnlyTools` is
+the non-mutating seven (`read_file`, `read_image`, `list_dir`, `glob`, `grep`, `file_stat`, `tree`);
+`selectSurface(readOnly)` picks
 between them, `getTool` finds by name within a surface. `listTools(config)` maps the active surface
 to the `{ name, description, inputSchema }[]` you advertise to a model. A `ToolDef`
 ([types.ts](https://github.com/getclarvis/agent-tools/blob/main/src/tools/types.ts)) is just a name,

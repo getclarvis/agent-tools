@@ -5,17 +5,23 @@ import { makeWorkspace, cleanup, write, resultText } from "../helpers/fixtures.j
 const FULL = [
   "apply_patch",
   "bash",
+  "copy",
   "edit_file",
+  "file_stat",
   "glob",
   "grep",
   "list_dir",
+  "mkdir",
   "monitor_list",
   "monitor_poll",
   "monitor_start",
   "monitor_stop",
+  "move",
   "multi_edit",
   "read_file",
   "read_image",
+  "remove",
+  "tree",
   "write_file",
 ];
 
@@ -26,7 +32,7 @@ describe("createAgentTools (library API)", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("lists the fourteen tools and exposes the resolved config", () => {
+  it("lists the twenty tools and exposes the resolved config", () => {
     const t = createAgentTools({ workspaceRoot: root, probeRipgrep: () => false });
     expect(t.config.workspaceRoot).toBe(root);
     expect(t.config.ripgrepAvailable).toBe(false);
@@ -62,7 +68,7 @@ describe("createAgentTools (library API)", () => {
         .listTools()
         .map((x) => x.name)
         .sort(),
-    ).toEqual(["glob", "grep", "list_dir", "read_file", "read_image"]);
+    ).toEqual(["file_stat", "glob", "grep", "list_dir", "read_file", "read_image", "tree"]);
 
     const w = await t.callTool("write_file", { path: "x.txt", content: "nope" });
     expect(w.isError).toBe(true);

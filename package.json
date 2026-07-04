@@ -1,7 +1,7 @@
 {
   "name": "@clarvis/agent-tools",
-  "version": "0.2.0",
-  "description": "A minimal, opinionated set of coding tools (read/write/edit/patch/bash/grep/glob) for driving an LLM agent over a workspace — usable as a plain library.",
+  "version": "0.3.0",
+  "description": "A minimal, opinionated set of coding tools (read/write/edit/patch/move/bash/grep/glob) for driving an LLM agent over a workspace — usable as a plain library.",
   "license": "MIT",
   "keywords": [
     "llm",

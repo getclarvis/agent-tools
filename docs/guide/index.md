@@ -24,7 +24,7 @@ exported so you can expose the tools however you like: an HTTP endpoint, a CLI, 
 ## Then tune it
 
 - **[Read-only mode](/guide/read-only-mode)** — expose only `read_file` / `read_image` / `list_dir` /
-  `glob` / `grep`, and drop the mutating tools entirely.
+  `glob` / `grep` / `file_stat` / `tree`, and drop the mutating tools entirely.
 - **[Limits & spill](/guide/limits-and-spill)** — how output is bounded, how oversized input is
   refused, and how `bash` overflow spills to disk.
 

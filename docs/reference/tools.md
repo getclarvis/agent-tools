@@ -1,7 +1,7 @@
 # The tools
 
-> The fourteen tools, their inputs, outputs, and error codes. Five are available in read-only mode;
-> the other nine require the full surface. In [read-only mode](/guide/read-only-mode) only the read
+> The twenty tools, their inputs, outputs, and error codes. Seven are available in read-only mode;
+> the other thirteen require the full surface. In [read-only mode](/guide/read-only-mode) only the read
 > tools are registered. This mirrors the canonical
 > [`SPEC.md`](https://github.com/getclarvis/agent-tools/blob/main/SPEC.md) in the repo.
 
@@ -12,10 +12,16 @@
 | [`list_dir`](#list_dir)       | no       | List the entries of a directory.                                   |
 | [`glob`](#glob)               | no       | Find files by glob, most-recently-modified first.                  |
 | [`grep`](#grep)               | no       | Search file contents by regular expression (optionally multiline). |
+| [`file_stat`](#file_stat)     | no       | Structured metadata for a path (type, size, mtime, mode) as JSON.  |
+| [`tree`](#tree)               | no       | Print a directory as an indented, gitignore-aware tree.            |
 | [`write_file`](#write_file)   | yes      | Create or overwrite a file (atomic).                               |
 | [`edit_file`](#edit_file)     | yes      | Replace one exact occurrence of a string in a file.                |
 | [`multi_edit`](#multi_edit)   | yes      | Apply several `edit_file`-style edits to one file atomically.      |
 | [`apply_patch`](#apply_patch) | yes      | Apply a unified diff (modify/create/delete/rename) atomically.     |
+| [`move`](#move)               | yes      | Move/rename one file (atomic).                                     |
+| [`copy`](#copy)               | yes      | Copy one file, binary-safe (atomic).                              |
+| [`mkdir`](#mkdir)             | yes      | Create a directory and missing parents.                           |
+| [`remove`](#remove)           | yes      | Delete one file.                                                   |
 | [`bash`](#bash)               | yes      | Run a shell command (`sh -c`) and capture stdout/stderr/exit.      |
 | [`monitor_start`](#monitor_start) | yes  | Start a background command (dev server, watcher); return an id, optionally waiting until ready. |
 | [`monitor_poll`](#monitor_poll)   | yes  | Read a monitor's new output since a byte offset; report running state and exit code.            |
@@ -116,6 +122,39 @@ the scan was **incomplete** when it was cut off by the output cap.
 
 **Errors.** `not_found`, `path_escape`, `invalid_input` (bad regex).
 
+## file_stat
+
+Return structured metadata for one path, as a JSON object — inspect a path before reading it.
+
+| Input  | Type   | Required | Default | Notes             |
+| ------ | ------ | -------- | ------- | ----------------- |
+| `path` | string | yes      | —       | Path to inspect.  |
+
+**Output.** A JSON object `{ path, type, size, mtime, mode, ... }` where `type` is
+`file` \| `directory` \| `symlink` \| `other`, `mtime` is ISO-8601, and `mode` is an octal string
+(e.g. `"0644"`). A symlink is reported **without being followed**, with a `symlink_target`. For a
+regular file it also reports `binary` (whether the content looks binary) and `mime` (an image MIME
+type or `null`), reading only a small head slice — so it works on files too large to read.
+
+**Errors.** `not_found`, `path_escape`, `io_error`.
+
+## tree
+
+Print a directory as an indented tree — directories end with `/`, symlinks with `@`, and files show
+a byte size.
+
+| Input               | Type    | Required | Default        | Notes                                                           |
+| ------------------- | ------- | -------- | -------------- | --------------------------------------------------------------- |
+| `path`              | string  | no       | workspace root | Root directory of the tree.                                     |
+| `depth`             | integer | no       | unlimited      | Maximum levels to descend below the root (≥ 1).                 |
+| `respect_gitignore` | boolean | no       | `true`         | Skip files ignored by the git ignore stack, and the `.git/` dir.|
+
+**Output.** An indented ASCII tree rooted at `path`. Symlinked directories are **listed but not
+traversed** (cycle-safe). Output is byte-bounded like `grep`/`read_file`. An empty (or fully ignored)
+directory prints a `(no entries)` line.
+
+**Errors.** `not_found`, `not_a_file` (path is a file), `path_escape`, `io_error`.
+
 ## write_file
 
 Create or overwrite a file with the given content (atomic: temp file + `rename`).
@@ -183,6 +222,70 @@ endings and BOM; created files use LF.
 
 **Errors.** `patch_failed` (a hunk did not apply; names the file), `invalid_input`, `not_found`,
 `not_a_file`, `is_binary`, `too_large`, `path_escape`, `io_error`.
+
+## move
+
+Move or rename one file (atomic `rename`). Files only — a directory source is rejected; use `bash`
+for directory moves.
+
+| Input         | Type    | Required | Default | Notes                                                     |
+| ------------- | ------- | -------- | ------- | --------------------------------------------------------- |
+| `source`      | string  | yes      | —       | File to move.                                             |
+| `destination` | string  | yes      | —       | New path. Missing parent directories are created.        |
+| `overwrite`   | boolean | no       | `false` | When true, replace an existing destination file.          |
+
+**Output.** A success message naming the source and destination. Refuses (`invalid_input`) if the
+destination already exists unless `overwrite` is true, and if `source` equals `destination`. The
+source's permission mode is preserved. Refuses to move through a symlink at either endpoint.
+
+**Errors.** `not_found` (missing source), `not_a_file` (directory source, or directory destination),
+`invalid_input` (destination exists without `overwrite`, same source/destination, or a symlink),
+`path_escape`, `io_error`.
+
+## copy
+
+Copy one file (atomic publish via temp + `rename`, binary-safe). Files only — a directory source is
+rejected; use `bash` for directory copies.
+
+| Input         | Type    | Required | Default | Notes                                                     |
+| ------------- | ------- | -------- | ------- | --------------------------------------------------------- |
+| `source`      | string  | yes      | —       | File to copy.                                            |
+| `destination` | string  | yes      | —       | Copy target. Missing parent directories are created.     |
+| `overwrite`   | boolean | no       | `false` | When true, replace an existing destination file.          |
+
+**Output.** A success message naming the source and destination. The source's permission mode is
+preserved and its bytes are copied exactly (binary-safe). Same refusals as `move` (existing
+destination, identical paths, symlink endpoints).
+
+**Errors.** `not_found`, `not_a_file`, `invalid_input`, `path_escape`, `io_error`.
+
+## mkdir
+
+Create a directory, including any missing parents (like `mkdir -p`). Idempotent — succeeds if the
+directory already exists.
+
+| Input  | Type   | Required | Notes                                                    |
+| ------ | ------ | -------- | -------------------------------------------------------- |
+| `path` | string | yes      | Directory to create. Missing parent directories are made.|
+
+**Output.** A message stating the directory was created (or already existed). Fails if the path
+already exists as a file.
+
+**Errors.** `not_a_file` (path, or a parent component, is a file), `path_escape`, `io_error`.
+
+## remove
+
+Delete one file. Files only — a directory is rejected; use `bash` for recursive directory removal.
+
+| Input  | Type   | Required | Notes            |
+| ------ | ------ | -------- | ---------------- |
+| `path` | string | yes      | File to delete.  |
+
+**Output.** A message naming the removed file. Fails with `not_found` if the path does not exist, and
+refuses to delete through a symlink.
+
+**Errors.** `not_found`, `not_a_file` (path is a directory), `invalid_input` (symlink), `path_escape`,
+`io_error`.
 
 ## bash
 

@@ -62,7 +62,7 @@ async function captureMode(target: string): Promise<number | undefined> {
   }
 }
 
-async function assertNotSymlink(target: string): Promise<void> {
+export async function assertNotSymlink(target: string): Promise<void> {
   const lst = await fs.lstat(target).catch(() => null);
   if (lst?.isSymbolicLink()) {
     throw new ToolError("invalid_input", `Refusing to write through a symlink: ${target}`, {
@@ -71,7 +71,7 @@ async function assertNotSymlink(target: string): Promise<void> {
   }
 }
 
-async function fsyncDir(dir: string): Promise<void> {
+export async function fsyncDir(dir: string): Promise<void> {
   let dh;
   try {
     dh = await fs.open(dir, "r");
