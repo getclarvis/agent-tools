@@ -390,3 +390,70 @@ describe("apply_patch", () => {
     });
   });
 });
+
+describe("apply_patch syntax annotation", () => {
+  let root: string;
+  let config: ServerConfig;
+
+  beforeEach(() => {
+    root = makeWorkspace();
+    config = makeConfig(root, { treeSitterAvailable: true });
+  });
+  afterEach(() => cleanup(root));
+
+  it("warns naming the file whose new content does not parse", async () => {
+    write(root, "ok.ts", "const a = 1;\n");
+    write(root, "bad.ts", "const b = 2;\n");
+    const patch =
+      `--- a/ok.ts\n+++ b/ok.ts\n@@ -1,1 +1,1 @@\n-const a = 1;\n+const a = 2;\n` +
+      `--- a/bad.ts\n+++ b/bad.ts\n@@ -1,1 +1,1 @@\n-const b = 2;\n+const b = = 2;\n`;
+    const r = await callTool("apply_patch", { patch }, config);
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("Applied patch:");
+    expect(r.text).toContain("warning: typescript syntax error in bad.ts at line 1");
+    expect(r.text).not.toContain("syntax error in ok.ts");
+  });
+
+  it("warns on a created file that does not parse", async () => {
+    const patch = `--- /dev/null\n+++ b/new.py\n@@ -0,0 +1,1 @@\n+def f(:\n`;
+    const r = await callTool("apply_patch", { patch }, config);
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("warning: python syntax error in new.py at line 1");
+  });
+
+  it("warns on a rename whose patched content does not parse, naming the new path", async () => {
+    write(root, "old.ts", "const a = 1;\n");
+    const patch = `--- a/old.ts\n+++ b/new.ts\n@@ -1,1 +1,1 @@\n-const a = 1;\n+const a = = 1;\n`;
+    const r = await callTool("apply_patch", { patch }, config);
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("warning: typescript syntax error in new.ts at line 1");
+  });
+
+  it("stays silent for a delete-only patch", async () => {
+    write(root, "gone.ts", "const a = 1;\n");
+    const patch = `--- a/gone.ts\n+++ /dev/null\n@@ -1,1 +0,0 @@\n-const a = 1;\n`;
+    const r = await callTool("apply_patch", { patch }, config);
+    expect(r.isError).toBe(false);
+    expect(r.text).not.toContain("warning:");
+  });
+
+  it("checks at most five eligible files", async () => {
+    const blocks: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      blocks.push(`--- /dev/null\n+++ b/f${i}.ts\n@@ -0,0 +1,1 @@\n+const x = = ${i};\n`);
+    }
+    const r = await callTool("apply_patch", { patch: blocks.join("") }, config);
+    expect(r.isError).toBe(false);
+    const count = (r.text.match(/warning: typescript syntax error/g) ?? []).length;
+    expect(count).toBe(5);
+    expect(r.text).not.toContain("syntax error in f5.ts");
+    expect(r.text).not.toContain("syntax error in f6.ts");
+  });
+
+  it("stays silent when tree-sitter is unavailable", async () => {
+    const patch = `--- /dev/null\n+++ b/new.ts\n@@ -0,0 +1,1 @@\n+const x = = 1;\n`;
+    const r = await callTool("apply_patch", { patch }, makeConfig(root));
+    expect(r.isError).toBe(false);
+    expect(r.text).not.toContain("warning:");
+  });
+});

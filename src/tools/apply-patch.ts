@@ -5,6 +5,7 @@ import { resolvePath, displayPath } from "../lib/paths.js";
 import { applyOpsAtomic, withFileLocks, type FileOp } from "../lib/atomic.js";
 import { encodeText, reencode, type Eol, type DecodedText } from "../lib/text.js";
 import { readTextFile } from "../lib/textfile.js";
+import { syntaxWarnings } from "../lib/syntax-annotate.js";
 import type { ToolDef } from "./types.js";
 
 function cleanName(name: string | undefined): string | undefined {
@@ -117,10 +118,16 @@ export const applyPatchTool: ToolDef = {
 
 async function applyParsed(
   parsed: StructuredPatch[],
-  config: { workspaceRoot: string; maxFileBytes: number; confineToWorkspace: boolean },
+  config: {
+    workspaceRoot: string;
+    maxFileBytes: number;
+    confineToWorkspace: boolean;
+    treeSitterAvailable: boolean;
+  },
 ): Promise<string> {
   const ops: FileOp[] = [];
   const summary: string[] = [];
+  const written: Array<{ rel: string; text: string }> = [];
   const seen = new Set<string>();
 
   const claim = (abs: string, rel: string): void => {
@@ -172,6 +179,7 @@ async function applyParsed(
             content: reencode(result, decoded),
           });
           summary.push(`  R ${relFrom} -> ${relTo} (+${adds} -${dels})`);
+          written.push({ rel: relTo, text: result });
         }
         continue;
       }
@@ -236,10 +244,12 @@ async function applyParsed(
       }
       ops.push({ type: "create", path: absTarget, content: encodeText(result, { eol, bom }) });
       summary.push(`  A ${rel} (+${adds} -${dels})`);
+      written.push({ rel, text: result });
     } else {
       const content = decoded ? reencode(result, decoded) : encodeText(result, { eol, bom });
       ops.push({ type: "modify", path: absTarget, content });
       summary.push(`  M ${rel} (+${adds} -${dels})`);
+      written.push({ rel, text: result });
     }
   }
 
@@ -250,5 +260,5 @@ async function applyParsed(
     throw new ToolError("io_error", `Failed to apply patch: ${(err as Error).message}`);
   }
 
-  return `Applied patch:\n${summary.join("\n")}`;
+  return `Applied patch:\n${summary.join("\n")}` + (await syntaxWarnings(written, config));
 }
