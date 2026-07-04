@@ -2,10 +2,10 @@
 
 A minimal, opinionated set of coding tools for driving an LLM agent over a
 workspace, usable as a **plain library**. It gives an agent the primitives it
-needs to read, search, edit, move, run, and monitor code: `read_file`, `read_image`,
-`list_dir`, `glob`, `grep`, `file_stat`, `tree`, `write_file`, `edit_file`, `multi_edit`,
-`apply_patch`, `move`, `copy`, `mkdir`, `remove`, `bash`, and the `monitor_*`
-background-process tools.
+needs to read, search, understand, edit, move, run, and monitor code: `read_file`,
+`read_image`, `list_dir`, `glob`, `grep`, `file_stat`, `tree`, `outline`, `check_syntax`,
+`write_file`, `edit_file`, `multi_edit`, `apply_patch`, `move`, `copy`, `mkdir`, `remove`,
+`bash`, and the `monitor_*` background-process tools.
 
 This package is **transport-agnostic**: it carries no built-in transport and no
 agent loop — it is the tools, and nothing else. Advertise the surface, dispatch
@@ -24,6 +24,11 @@ build around it.
 - Optional: [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) on `PATH`.
   When present, `grep` uses it; otherwise an equivalent in-process fallback is
   used. Results are kept consistent between the two backends.
+- Optional: [`@vscode/tree-sitter-wasm`](https://www.npmjs.com/package/@vscode/tree-sitter-wasm)
+  (`npm i @vscode/tree-sitter-wasm`) — prebuilt tree-sitter runtime + grammars.
+  When installed, the `outline` and `check_syntax` tools appear on the surface and
+  the writing tools annotate their results with syntax warnings; when absent, both
+  tools are hidden and writes are unannotated.
 
 ## Install
 
@@ -70,7 +75,7 @@ code `not_found`.
 | Option               | Default      | Meaning                                                                 |
 | -------------------- | ------------ | ----------------------------------------------------------------------- |
 | `workspaceRoot`      | — (required) | Base directory; relative tool paths resolve against it.                 |
-| `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`read_image`/`list_dir`/`glob`/`grep`/`file_stat`/`tree`). |
+| `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`read_image`/`list_dir`/`glob`/`grep`/`file_stat`/`tree`/`outline`/`check_syntax`). |
 | `confineToWorkspace` | `true`       | Reject paths that escape the workspace root (`path_escape`).             |
 | `maxOutputBytes`     | `131072`     | Per-result output cap (UTF-8 bytes); larger output is bounded.           |
 | `maxFileBytes`       | `20000000`   | Max size of an input file the text tools read; larger is rejected.      |
@@ -80,6 +85,7 @@ code `not_found`.
 | `monitorReadyTimeoutMs` | `30000`   | Default time `monitor_start` waits for `ready_when` before returning.    |
 | `maxMonitors`        | `32`         | Max live background monitors at once (beyond it, `too_many_monitors`).   |
 | `probeRipgrep`       | probes `rg`  | Override ripgrep detection (e.g. `() => false` in tests).               |
+| `probeTreeSitter`    | probes the peer dep | Override `@vscode/tree-sitter-wasm` detection; `false` hides `outline`/`check_syntax`. |
 
 ### Lower-level API
 
@@ -114,6 +120,8 @@ const { isError, content } = await dispatch("grep", { pattern: "TODO" }, config)
 | `grep`        | no       | Search file contents by regular expression (optionally multiline).|
 | `file_stat`   | no       | Structured metadata for a path (type, size, mtime, mode) as JSON. |
 | `tree`        | no       | Print a directory as an indented, gitignore-aware tree.           |
+| `outline`     | no       | Symbol skeleton of a source file with line ranges (tree-sitter).  |
+| `check_syntax`| no       | Parse a source file and report syntax errors (tree-sitter).       |
 | `write_file`  | yes      | Create or overwrite a file (atomic).                             |
 | `edit_file`   | yes      | Replace one exact occurrence of a string in a file.              |
 | `multi_edit`  | yes      | Apply several `edit_file`-style edits to one file atomically.    |
@@ -129,7 +137,12 @@ const { isError, content } = await dispatch("grep", { pattern: "TODO" }, config)
 | `monitor_list`  | yes    | List running and finished monitors.                             |
 
 In read-only mode only `read_file`, `read_image`, `list_dir`, `glob`, `grep`,
-`file_stat`, and `tree` are exposed.
+`file_stat`, `tree`, `outline`, and `check_syntax` are exposed. `outline` and
+`check_syntax` appear (on either surface) only when the optional
+`@vscode/tree-sitter-wasm` peer dependency is installed; when tree-sitter is
+available, the writing tools (`write_file`/`edit_file`/`multi_edit`/`apply_patch`)
+also append an advisory `warning: <language> syntax error ...` line to their
+result when the written content no longer parses.
 
 See [SPEC.md](./SPEC.md) for the full per-tool contract (inputs, behavior, and
 error codes).

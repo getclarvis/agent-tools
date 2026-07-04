@@ -12,8 +12,8 @@ the shared fixtures that make each test hermetic. It maps the npm scripts to the
 
 | Suite | Directory | In `npm test`? | What it covers |
 |---|---|---|---|
-| Contract | `tests/contract/` | Yes | One file per source module — each of the twenty tools, plus `config`, `errors`, the cross-tool `symlink` policy, and every `src/lib/` primitive (`atomic`, `binary`, `ignore`, `match-cascade`, `output`, `paths`, `rg`, `text`, `textfile`, `log`): the input/output/error contract of that module, driven through `dispatch` where it has a tool surface and called directly where it is a primitive. |
-| Integration | `tests/integration/` | Yes | Cross-cutting behavior: the public API (`api.test.ts`), core dispatch and the registry (`core.test.ts`), grep backend parity (`grep-parity.test.ts`), read-only surface (`read-only.test.ts`), confinement off (`no-isolation.test.ts`), and statelessness (`statelessness.test.ts`). |
+| Contract | `tests/contract/` | Yes | One file per source module — each of the twenty-two tools, plus `config`, `errors`, the cross-tool `symlink` policy, and every `src/lib/` primitive (`atomic`, `binary`, `ignore`, `match-cascade`, `output`, `paths`, `rg`, `text`, `textfile`, `log`, `treesitter`, `syntax-annotate`): the input/output/error contract of that module, driven through `dispatch` where it has a tool surface and called directly where it is a primitive. |
+| Integration | `tests/integration/` | Yes | Cross-cutting behavior: the public API (`api.test.ts`), core dispatch and the registry (`core.test.ts`), grep backend parity (`grep-parity.test.ts`), read-only surface (`read-only.test.ts`), the surface without tree-sitter (`syntax-absent.test.ts`), confinement off (`no-isolation.test.ts`), and statelessness (`statelessness.test.ts`). |
 
 The Vitest config ([vitest.config.ts](https://github.com/getclarvis/agent-tools/blob/main/vitest.config.ts))
 uses the `node` environment, includes `tests/**/*.test.ts`, and excludes `tests/live/**` (reserved

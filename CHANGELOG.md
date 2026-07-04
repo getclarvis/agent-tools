@@ -29,9 +29,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`tree` tool.** Print a directory as an indented, gitignore-aware tree (`depth`-limited,
   symlinked directories listed but not traversed, output byte-bounded). Available in the read-only
   surface.
+- **`outline` tool.** Return the symbol skeleton of one source file — classes, functions, methods
+  and other declarations as indented lines with 1-based `(start-end)` line ranges — so an agent can
+  understand an unfamiliar file cheaply and then read only the relevant ranges. Supports
+  typescript, tsx, javascript, python, go, rust, java and c-sharp (picked by file extension).
+  Available in the read-only surface.
+- **`check_syntax` tool.** Parse one source file with tree-sitter and report syntax errors (parser
+  `ERROR`/`MISSING` nodes) as JSON with 1-based line/column, a kind, and a nearby excerpt. A pure
+  parse check — no type-checking or linting. Language picked by file extension; covers every
+  bundled grammar (the eight outline languages plus ruby, php, bash, css, ini, powershell and
+  c/cpp via the cpp grammar). Available in the read-only surface.
+- **Syntax warnings on writes.** When tree-sitter is available, `write_file`, `edit_file`,
+  `multi_edit` and `apply_patch` append a
+  `warning: <language> syntax error in <file> at line N, column C ...` line to their success
+  result when the written content no longer parses (advisory only — the write always succeeds;
+  `apply_patch` checks at most five files per patch).
+- **Optional `@vscode/tree-sitter-wasm` peer dependency.** `outline`, `check_syntax` and the write
+  warnings activate only when the host installs `@vscode/tree-sitter-wasm` (prebuilt WASM runtime +
+  grammars, MIT); when absent, the two tools are hidden from the surface — indistinguishable from
+  unknown tools — and writes are unannotated. Availability is probed once at config resolution
+  (`treeSitterAvailable`, injectable via `probeTreeSitter`), so the core install stays lean.
 
-No new error codes or config knobs: the four mutating tools reuse `invalid_input` (existing
-destination, symlink, identical paths), `not_found`, `not_a_file`, `path_escape`, and `io_error`.
+No new error codes: the new tools reuse `invalid_input` (unsupported extension), `not_found`,
+`not_a_file`, `is_binary`, `too_large` (a 2 MB parse limit), `path_escape`, `timeout`, `aborted`,
+`io_error`, and `internal`; the four fs tools reuse `invalid_input` (existing destination, symlink,
+identical paths), `not_found`, `not_a_file`, `path_escape`, and `io_error`.
 
 ## [0.2.0]
 

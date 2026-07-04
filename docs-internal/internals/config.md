@@ -16,8 +16,8 @@ the validation primitives, the argv/env builder, and the floors the published pa
 
 | Symbol | Kind | Notes |
 |---|---|---|
-| `resolveConfig(options)` | function | Options → validated `ServerConfig`. Throws `StartupError` on bad input. Probes ripgrep once (overridable via `options.probeRipgrep`). |
-| `buildConfig(argv, env, probe?)` | function | argv/env front-end (CLI / long-running service). Parses flags + vars, then delegates to `resolveConfig`. |
+| `resolveConfig(options)` | function | Options → validated `ServerConfig`. Throws `StartupError` on bad input. Probes ripgrep once (overridable via `options.probeRipgrep`) and the tree-sitter peer once (overridable via `options.probeTreeSitter`). |
+| `buildConfig(argv, env, probe?, probeTS?)` | function | argv/env front-end (CLI / long-running service). Parses flags + vars, then delegates to `resolveConfig`. |
 | `ServerConfig` / `AgentToolsOptions` | types | The resolved config, and the options accepted by `resolveConfig`/`createAgentTools`. |
 | `StartupError` | class | Thrown for any invalid config; distinct from a runtime `ToolError`. |
 | `DEFAULT_MAX_OUTPUT_BYTES` `DEFAULT_MAX_FILE_BYTES` `DEFAULT_BASH_TIMEOUT_MS` `DEFAULT_BASH_TIMEOUT_MAX_MS` | const | The shipped defaults, exported for callers and tests. |
@@ -38,6 +38,7 @@ Internal (not exported): `MIN_OUTPUT_BYTES` / `MIN_FILE_BYTES` (1024), `parseWor
 | `bashTimeoutMs` | `120000` | integer ≥ `1`. |
 | `bashTimeoutMaxMs` | `600000` | integer ≥ `1`, and **≥ `bashTimeoutMs`** (cross-field check). |
 | `ripgrepAvailable` | probed | `spawnSync("rg", ["--version"]).status === 0`. |
+| `treeSitterAvailable` | probed | `createRequire(...).resolve("@vscode/tree-sitter-wasm")` succeeds (`probeTreeSitter` in `src/lib/treesitter.ts`). |
 | `readOnly` | `false` | — |
 | `confineToWorkspace` | `true` | — |
 
@@ -80,3 +81,6 @@ An unrecognized truthy string for `READ_ONLY` / `ALLOW_OUTSIDE_WORKSPACE` throws
   into `process.env` breaks the "config is passed in" contract and the statelessness guarantee.
 - **`ripgrepAvailable` is resolved once**, at config time — not re-probed per call. Tests that need a
   deterministic backend set it explicitly via `makeConfig(root, { ripgrepAvailable })`.
+- **`treeSitterAvailable` follows the same pattern** (module-resolution probe, no WASM load; the
+  runtime itself lazy-loads on first parse inside `src/lib/treesitter.ts`). `makeConfig` defaults it
+  to `false`; tree-sitter tests opt in via `makeConfig(root, { treeSitterAvailable: true })`.

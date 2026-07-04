@@ -1,6 +1,6 @@
 # Read-only mode
 
-> Set `readOnly: true` and the tool surface shrinks to the seven non-mutating tools. The mutating
+> Set `readOnly: true` and the tool surface shrinks to the nine non-mutating tools. The mutating
 > tools and `bash` are not registered at all — a model literally cannot call them.
 
 ## What it exposes
@@ -11,12 +11,16 @@ import { createAgentTools } from "@clarvis/agent-tools";
 const tools = createAgentTools({ workspaceRoot: process.cwd(), readOnly: true });
 
 console.log(tools.listTools().map((t) => t.name));
-// [ 'read_file', 'read_image', 'list_dir', 'glob', 'grep', 'file_stat', 'tree' ]
+// [ 'read_file', 'read_image', 'list_dir', 'glob', 'grep', 'file_stat', 'tree',
+//   'outline', 'check_syntax' ]
 ```
 
 In read-only mode only **`read_file`**, **`read_image`**, **`list_dir`**, **`glob`**, **`grep`**,
-**`file_stat`**, and **`tree`** are exposed. `write_file`, `edit_file`, `multi_edit`, `apply_patch`,
-`move`, `copy`, `mkdir`, `remove`, `bash`, and the four `monitor_*` tools are dropped from the surface.
+**`file_stat`**, **`tree`**, **`outline`**, and **`check_syntax`** are exposed. `write_file`,
+`edit_file`, `multi_edit`, `apply_patch`, `move`, `copy`, `mkdir`, `remove`, `bash`, and the four
+`monitor_*` tools are dropped from the surface. (`outline` and `check_syntax` additionally require
+the optional `@vscode/tree-sitter-wasm` peer dependency — without it they are hidden from both
+surfaces, the same way read-only hides the mutating tools.)
 
 ## How a blocked call behaves
 

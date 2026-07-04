@@ -1,6 +1,6 @@
 # Getting started
 
-> `@clarvis/agent-tools` is a transport-agnostic library that gives an LLM agent twenty coding tools
+> `@clarvis/agent-tools` is a transport-agnostic library that gives an LLM agent twenty-two coding tools
 > over a workspace. You give it a workspace root; it gives you a validated, bounded, workspace-confined
 > surface you can advertise to a model and call. This page takes you from install to a first read and
 > a first edit.

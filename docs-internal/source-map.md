@@ -30,12 +30,15 @@ detail that was stripped from `SPEC.md` and the published reference):
 | Config / defaults / argv+env builder | `src/config.ts` |
 | Error contract | `src/errors.ts` |
 | Tool registry & surface selection | `src/tools/registry.ts`, `src/tools/types.ts` |
-| Tool handlers | `src/tools/{read-file,read-image,list-dir,glob,grep,file-stat,tree,write-file,edit-file,multi-edit,apply-patch,move,copy,mkdir,remove,bash,monitor}.ts` |
+| Tool handlers | `src/tools/{read-file,read-image,list-dir,glob,grep,file-stat,tree,outline,check-syntax,write-file,edit-file,multi-edit,apply-patch,move,copy,mkdir,remove,bash,monitor}.ts` |
 | Path confinement | `src/lib/paths.ts` |
 | Text decode/encode | `src/lib/text.ts`, `src/lib/textfile.ts`, `src/lib/binary.ts` |
 | Edit matching | `src/lib/match-cascade.ts` |
 | Atomic writes / locks | `src/lib/atomic.ts` |
 | Search backends | `src/lib/rg.ts`, `src/lib/files.ts`, `src/lib/ignore.ts` |
 | Output bounding / spill | `src/lib/output.ts`, `src/lib/token.ts` |
+| Tree-sitter runtime / probe / parse | `src/lib/treesitter.ts` |
+| Outline node-type tables & walker | `src/lib/outline-spec.ts` |
+| Write syntax warnings | `src/lib/syntax-annotate.ts` |
 
 See [architecture.md](./architecture.md) for how these fit together.

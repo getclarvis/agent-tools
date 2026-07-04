@@ -44,7 +44,8 @@ features:
 
 `@clarvis/agent-tools` is the tool layer for an LLM coding agent, packaged as a library you call
 directly. You give it a workspace root; it gives you a validated, bounded, workspace-confined surface
-of twenty tools — the primitives an agent needs to read, search, edit, move, run, and monitor code:
+of twenty-two tools — the primitives an agent needs to read, search, understand, edit, move, run,
+and monitor code:
 
 - **Advertise a tool surface to your model.** `listTools()` returns each tool's `name`,
   `description`, and JSON Schema — hand it straight to a model's tool-use API.
