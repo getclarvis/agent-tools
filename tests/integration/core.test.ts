@@ -21,12 +21,13 @@ describe("core / registry", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("exposes exactly the twenty fixed tools", () => {
+  it("exposes exactly the twenty-two fixed tools", () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         "apply_patch",
         "bash",
+        "check_syntax",
         "copy",
         "edit_file",
         "file_stat",
@@ -40,6 +41,7 @@ describe("core / registry", () => {
         "monitor_stop",
         "move",
         "multi_edit",
+        "outline",
         "read_file",
         "read_image",
         "remove",
@@ -155,6 +157,22 @@ describe("listTools surface", () => {
       "glob",
       "grep",
       "list_dir",
+      "read_file",
+      "read_image",
+      "tree",
+    ]);
+  });
+
+  it("the read-only surface includes the syntax tools when tree-sitter is available", () => {
+    const ro = listTools(makeConfig(root, { readOnly: true, treeSitterAvailable: true }));
+    const names = ro.map((t) => t.name).sort();
+    expect(names).toEqual([
+      "check_syntax",
+      "file_stat",
+      "glob",
+      "grep",
+      "list_dir",
+      "outline",
       "read_file",
       "read_image",
       "tree",

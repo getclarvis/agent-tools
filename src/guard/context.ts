@@ -15,6 +15,8 @@ const PATH_ARG_TOOLS = new Set([
   "grep",
   "file_stat",
   "tree",
+  "outline",
+  "check_syntax",
   "mkdir",
   "remove",
 ]);

@@ -5,6 +5,7 @@ import { makeWorkspace, cleanup, write, resultText } from "../helpers/fixtures.j
 const FULL = [
   "apply_patch",
   "bash",
+  "check_syntax",
   "copy",
   "edit_file",
   "file_stat",
@@ -18,6 +19,7 @@ const FULL = [
   "monitor_stop",
   "move",
   "multi_edit",
+  "outline",
   "read_file",
   "read_image",
   "remove",
@@ -32,10 +34,15 @@ describe("createAgentTools (library API)", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("lists the twenty tools and exposes the resolved config", () => {
-    const t = createAgentTools({ workspaceRoot: root, probeRipgrep: () => false });
+  it("lists the twenty-two tools and exposes the resolved config", () => {
+    const t = createAgentTools({
+      workspaceRoot: root,
+      probeRipgrep: () => false,
+      probeTreeSitter: () => true,
+    });
     expect(t.config.workspaceRoot).toBe(root);
     expect(t.config.ripgrepAvailable).toBe(false);
+    expect(t.config.treeSitterAvailable).toBe(true);
     expect(
       t
         .listTools()
@@ -62,7 +69,12 @@ describe("createAgentTools (library API)", () => {
   });
 
   it("read-only mode hides mutating tools and blocks writes", async () => {
-    const t = createAgentTools({ workspaceRoot: root, readOnly: true, probeRipgrep: () => false });
+    const t = createAgentTools({
+      workspaceRoot: root,
+      readOnly: true,
+      probeRipgrep: () => false,
+      probeTreeSitter: () => false,
+    });
     expect(
       t
         .listTools()

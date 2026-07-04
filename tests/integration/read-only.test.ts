@@ -12,7 +12,17 @@ import {
 } from "../helpers/fixtures.js";
 import type { ServerConfig } from "../../src/config.js";
 
-const READ_TOOLS = ["file_stat", "glob", "grep", "list_dir", "read_file", "read_image", "tree"];
+const READ_TOOLS = [
+  "check_syntax",
+  "file_stat",
+  "glob",
+  "grep",
+  "list_dir",
+  "outline",
+  "read_file",
+  "read_image",
+  "tree",
+];
 const HIDDEN_TOOLS = [
   "apply_patch",
   "bash",
@@ -41,7 +51,7 @@ describe("read-only surface", () => {
   });
   afterEach(() => cleanup(root));
 
-  it("advertises exactly the seven non-mutating tools", () => {
+  it("advertises exactly the nine non-mutating tools", () => {
     expect(
       selectSurface(true)
         .map((t) => t.name)
@@ -56,9 +66,9 @@ describe("read-only surface", () => {
     }
   });
 
-  it("the full (default) surface still advertises all twenty", () => {
+  it("the full (default) surface still advertises all twenty-two", () => {
     expect(selectSurface(false)).toBe(tools);
-    expect(selectSurface(false).length).toBe(20);
+    expect(selectSurface(false).length).toBe(22);
   });
 
   it("a hidden tool and an unknown name are indistinguishable not_found errors", async () => {
