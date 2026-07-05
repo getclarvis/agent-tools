@@ -6,7 +6,7 @@ hero:
   text: The coding tools your agent needs — as a plain library
   tagline: Twenty-five batteries-included tools to read, search, edit, patch, move, run, and monitor code over a workspace. Transport-agnostic and confined to your workspace by default — embed them in any agent loop, or drive them from a transport of your own.
   image:
-    src: /logo.svg
+    src: /loop.webp
     alt: "@clarvis/agent-tools"
   actions:
     - theme: brand
