@@ -32,7 +32,7 @@ build around it.
 
 ## Install
 
-```sh
+```bash
 npm install @clarvis/agent-tools
 ```
 
@@ -144,7 +144,7 @@ available, the writing tools (`write_file`/`edit_file`/`multi_edit`/`apply_patch
 also append an advisory `warning: <language> syntax error ...` line to their
 result when the written content no longer parses.
 
-See [SPEC.md](./SPEC.md) for the full per-tool contract (inputs, behavior, and
+See [SPEC.md](SPEC.md) for the full per-tool contract (inputs, behavior, and
 error codes).
 
 ### Output bounding
@@ -186,7 +186,7 @@ This is the most important property of these tools, so it is stated plainly:
 
 **Run it inside an OS-level sandbox** — a container, a VM, a dedicated
 low-privilege user, seccomp/AppArmor, or equivalent — scoped to the project you
-intend the agent to work in. See [SECURITY.md](./SECURITY.md) for the full trust
+intend the agent to work in. See [SECURITY.md](SECURITY.md) for the full trust
 model.
 
 ## Documentation
@@ -212,11 +212,11 @@ Full guides and reference live at
   [deploy securely](https://agent-tools.clarvis.dev/operations/deploy-securely).
 
 The canonical per-tool contract (inputs, behavior, error codes) is
-[SPEC.md](./SPEC.md).
+[SPEC.md](SPEC.md).
 
 ## Development
 
-```sh
+```bash
 npm run build         # tsc -> dist/ (emits .d.ts)
 npm test              # vitest (contract + integration)
 npm run test:coverage # vitest + 95% coverage gate
@@ -228,11 +228,11 @@ npm run pre-commit    # typecheck + format:check + test:coverage
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup and
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and
 the quality gate, [`docs-internal/`](docs-internal/) for the architecture and
-per-subsystem internals, and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md). Report
-security issues privately per [SECURITY.md](./SECURITY.md).
+per-subsystem internals, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Report
+security issues privately per [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](./LICENSE) © Clarvis
+[MIT](LICENSE) © Clarvis

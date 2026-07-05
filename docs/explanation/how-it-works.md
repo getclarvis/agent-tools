@@ -19,7 +19,7 @@
 └───────────────┬─────────────────────────────────────────────┘
                 │  handler(args, config)
                 ▼
-      the tool registry (14 ToolDefs)
+      the tool registry (25 ToolDefs)
                 │
                 ▼
       the workspace  (fs · child_process · ripgrep?)
