@@ -6,7 +6,7 @@
 
 ## Checklist
 
-- [ ] `npm run pre-commit` is green (typecheck + format:check + test).
+- [ ] `npm run pre-commit` is green (typecheck + format:check + test:coverage at the 95% gate).
 - [ ] Tests added/updated for the behavior change (`tests/contract/` for a tool contract,
       `tests/integration/` for cross-cutting behavior).
 - [ ] If a **tool contract** changed, `SPEC.md`, `docs/reference/tools.md`, and the tool's contract

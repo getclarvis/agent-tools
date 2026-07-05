@@ -102,7 +102,7 @@ export default defineConfig({
       { text: "Concepts", activeMatch: "/explanation/", items: conceptsGroup.items },
       { text: "Operations", link: "/operations/deploy-securely", activeMatch: "/operations/" },
       {
-        text: "v0.1.0",
+        text: "v0.3.0",
         items: [
           { text: "npm", link: "https://www.npmjs.com/package/@clarvis/agent-tools" },
           { text: "SPEC.md", link: `${repo}/blob/main/SPEC.md` },
