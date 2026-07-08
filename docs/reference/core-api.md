@@ -58,7 +58,12 @@ interface ToolDef {
     args: Record<string, unknown>,
     config: ServerConfig,
     signal?: AbortSignal,
-  ) => Promise<string | ContentPart[]>; // a plain string is sugar for a single text part
+  ) => Promise<string | ToolResult>; // a plain string is sugar for a single text part
+}
+
+interface ToolResult {
+  content: string | ContentPart[]; // string is sugar for a single text part
+  meta?: Record<string, unknown>; // structured sidecar surfaced on DispatchResult.meta
 }
 ```
 

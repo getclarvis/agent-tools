@@ -41,5 +41,6 @@ detail that was stripped from `SPEC.md` and the published reference):
 | Tree-sitter runtime / probe / parse | `src/lib/treesitter.ts` |
 | Outline node-type tables & walker | `src/lib/outline-spec.ts` |
 | Write syntax warnings | `src/lib/syntax-annotate.ts` |
+| Unified diff for `meta.diff` (editing tools) | `src/lib/unified-diff.ts` |
 
 See [architecture.md](./architecture.md) for how these fit together.

@@ -6,10 +6,17 @@ security model, see [README.md](./README.md).
 
 ## Conventions
 
-- **Return value.** Each tool call returns `{ isError, content }`, where `content` is
+- **Return value.** Each tool call returns `{ isError, content, meta? }`, where `content` is
   an array of parts: a text part `{ type: "text", text }` or an image part
   `{ type: "image", data, mimeType }` (`data` is base64). On failure `isError` is set
   and `content` is a single text part holding a JSON error object (see [Errors](#errors)).
+- **Structured `meta`.** A tool may also return an optional `meta` object carrying
+  structured data for a client (never shown to the model). The editing tools use it for a
+  diff: `edit_file`, `multi_edit`, `write_file` (on **overwrite** only), and `replace`
+  (on apply) set `meta.diff` to a **real unified diff** (true line numbers, three lines of
+  context, via `createTwoFilesPatch`) of the change. The human `content` text stays the
+  short prose summary. `meta.diff` is absent when there is nothing to compare (a brand-new
+  `write_file`, or an overwrite whose prior content is binary/unreadable).
 - **Result format.** On success most tools return one text part. `bash` returns a
   single text part holding a JSON object (`exit_code`, `stdout`, `stderr`, `signal`,
   `timed_out`); a non-zero exit is a success (`isError` false), not an error. Only

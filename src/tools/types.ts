@@ -1,5 +1,5 @@
 import type { ServerConfig } from "../config.js";
-import type { ContentPart } from "./content.js";
+import type { ToolResult } from "./content.js";
 
 export interface ToolDef {
   name: string;
@@ -13,5 +13,5 @@ export interface ToolDef {
     args: Record<string, unknown>,
     config: ServerConfig,
     signal?: AbortSignal,
-  ) => Promise<string | ContentPart[]>;
+  ) => Promise<string | ToolResult>;
 }

@@ -7,6 +7,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Added
+
+- **Structured `meta.diff` on the editing tools.** `edit_file`, `multi_edit`, `write_file` (on
+  overwrite), and `replace` (on apply) now carry a real unified diff of the change (true line numbers,
+  three lines of context) on the result's `meta.diff` — a sidecar for a client to render, never shown
+  to the model. The model-facing `content` stays the short prose summary. Absent when there is nothing
+  to compare (a brand-new `write_file`, or an overwrite whose prior content is binary/unreadable).
+- **`DispatchResult.meta`.** Dispatch results gain an optional `meta` field, and a `ToolDef.handler`
+  may now return a `ToolResult` (`{ content, meta? }`) in addition to a bare `string`. `ToolResult`
+  is exported from the package root.
+
+### Changed
+
+- **`ToolDef.handler` return type narrowed to `string | ToolResult`** (was `string | ContentPart[]`).
+  A handler that produced content parts directly (e.g. `read_image`) now wraps them in a `ToolResult`
+  (`{ content: [...] }`). `dispatch` / `callTool` consumers are unaffected: the `DispatchResult` shape
+  is unchanged apart from the additive `meta`.
+
 ## [0.3.0]
 
 ### Added
@@ -145,7 +165,8 @@ Initial public release.
 - **VitePress documentation site** ([agent-tools.clarvis.dev](https://agent-tools.clarvis.dev)) and
   the canonical per-tool [`SPEC.md`](SPEC.md).
 
-[Unreleased]: https://github.com/getclarvis/agent-tools/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/getclarvis/agent-tools/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/getclarvis/agent-tools/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/getclarvis/agent-tools/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/getclarvis/agent-tools/compare/v0.1.1...v0.2.0
 [0.1.0]: https://github.com/getclarvis/agent-tools/releases/tag/v0.1.0

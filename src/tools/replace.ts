@@ -168,10 +168,15 @@ export const replace: ToolDef = {
       (c) => `  M ${c.rel} (${c.count} replacement${c.count === 1 ? "" : "s"})`,
     );
     const written = changed.map((c) => ({ rel: c.rel, text: c.text }));
-    return (
+    const content =
       `Replaced ${totalReplacements} occurrence(s) in ${changed.length} file(s):\n` +
       summary.join("\n") +
-      (await syntaxWarnings(written, config))
-    );
+      (await syntaxWarnings(written, config));
+    const diff = changed
+      .map((c) =>
+        createTwoFilesPatch(c.rel, c.rel, c.before, c.after, undefined, undefined, { context: 3 }),
+      )
+      .join("\n");
+    return diff ? { content, meta: { diff } } : { content };
   },
 };

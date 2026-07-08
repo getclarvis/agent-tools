@@ -3,7 +3,7 @@ import type { ValidateFunction } from "ajv";
 import { ToolError, serializeError } from "./errors.js";
 import { bound } from "./lib/output.js";
 import { tools, getTool, selectSurface } from "./tools/registry.js";
-import { textPart, type ContentPart } from "./tools/content.js";
+import { textPart, type ContentPart, type ToolResult } from "./tools/content.js";
 import { buildGuardContext } from "./guard/context.js";
 import type { ElicitRequest } from "./guard/types.js";
 import type { ServerConfig } from "./config.js";
@@ -28,6 +28,11 @@ for (const tool of tools) {
 export interface DispatchResult {
   isError: boolean;
   content: ContentPart[];
+  meta?: Record<string, unknown>;
+}
+
+function normalizeOutput(out: string | ToolResult): ToolResult {
+  return typeof out === "string" ? { content: out } : out;
 }
 
 function errorResult(err: unknown): DispatchResult {
@@ -100,9 +105,13 @@ export async function dispatch(
   if (gate) return gate;
 
   try {
-    const out = await tool.handler(filled, config, signal);
-    const parts = typeof out === "string" ? [textPart(out)] : out;
-    return { isError: false, content: boundParts(parts, tool.bounded, config.maxOutputBytes) };
+    const { content, meta } = normalizeOutput(await tool.handler(filled, config, signal));
+    const parts = typeof content === "string" ? [textPart(content)] : content;
+    return {
+      isError: false,
+      content: boundParts(parts, tool.bounded, config.maxOutputBytes),
+      ...(meta ? { meta } : {}),
+    };
   } catch (err) {
     return errorResult(err);
   }

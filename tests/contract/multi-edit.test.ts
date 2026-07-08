@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { multiEdit } from "../../src/tools/multi-edit.js";
-import { makeWorkspace, cleanup, makeConfig, callTool, write, read } from "../helpers/fixtures.js";
+import {
+  makeWorkspace,
+  cleanup,
+  makeConfig,
+  callTool,
+  handlerText,
+  write,
+  read,
+} from "../helpers/fixtures.js";
 import type { ServerConfig } from "../../src/config.js";
 
 describe("multi_edit", () => {
@@ -116,7 +124,7 @@ describe("multi_edit edge cases", () => {
   it("skips an undefined edit slot yet still counts it as applied", async () => {
     write(root, "f.txt", "hello world");
     const msg = await multiEdit.handler({ path: "f.txt", edits: [undefined] }, config);
-    expect(msg).toContain("Applied 1 edit to");
+    expect(handlerText(msg)).toContain("Applied 1 edit to");
     expect(read(root, "f.txt")).toBe("hello world");
   });
 
@@ -126,7 +134,7 @@ describe("multi_edit edge cases", () => {
       { path: "f.txt", edits: [undefined, { old_string: "beta", new_string: "gamma" }] },
       config,
     );
-    expect(msg).toContain("Applied 2 edits to");
+    expect(handlerText(msg)).toContain("Applied 2 edits to");
     expect(read(root, "f.txt")).toBe("alpha gamma");
   });
 });
