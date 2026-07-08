@@ -7,6 +7,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.1]
+
 ### Fixed
 
 - **Dropped `minLength: 1` from `multi_edit`'s nested `edits[].old_string` schema.** A `minLength`
