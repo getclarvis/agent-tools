@@ -345,7 +345,13 @@ replace_all? }`, required).
 **Behavior:** Edits run in order, each operating on the result of the previous, and
 each inherits `edit_file`'s exact-then-whitespace-tolerant matching. The whole batch is
 applied atomically; any failing edit aborts the call with its index and nothing is
-written.
+written. An empty `old_string` aborts with `invalid_input` at that edit's index.
+
+> The nested `edits[].old_string` deliberately carries **no `minLength` constraint** (the
+> empty-string rejection is enforced at runtime instead). A `minLength` on a string nested
+> inside an array-of-objects makes some grammar-constrained decoders (e.g. guided JSON on
+> OpenAI-compatible gateways) emit corrupted argument strings; the flat `edit_file` schema
+> is unaffected and keeps its `minLength`. Do not re-add it here.
 
 **Errors:** as `edit_file`, prefixed with the failing edit index.
 

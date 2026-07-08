@@ -56,6 +56,24 @@ describe("multi_edit", () => {
     expect(read(root, "f.txt")).toBe("hello world");
   });
 
+  it("rejects an empty old_string with invalid_input, naming the edit index", async () => {
+    write(root, "f.txt", "hello world");
+    const r = await callTool(
+      "multi_edit",
+      {
+        path: "f.txt",
+        edits: [
+          { old_string: "hello", new_string: "hi" },
+          { old_string: "", new_string: "x" },
+        ],
+      },
+      config,
+    );
+    expect(r.json.error).toBe("invalid_input");
+    expect(r.json.index).toBe(1);
+    expect(read(root, "f.txt")).toBe("hello world");
+  });
+
   it("rejects an empty edits array with invalid_input", async () => {
     write(root, "f.txt", "x");
     const r = await callTool("multi_edit", { path: "f.txt", edits: [] }, config);
