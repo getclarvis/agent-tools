@@ -18,9 +18,9 @@ control flow, the ajv setup, and the surface-selection rules the published pages
 
 | Symbol | Kind | Notes |
 |---|---|---|
-| `dispatch(name, args, config)` | function | The whole request path. Returns `Promise<DispatchResult>` (`{ isError, text }`); never throws for tool-level problems. |
+| `dispatch(name, args, config)` | function | The whole request path. Returns `Promise<DispatchResult>` (`{ isError, content, meta? }`); never throws for tool-level problems. |
 | `listTools(config)` | function | Maps `selectSurface(config.readOnly)` to `{ name, description, inputSchema }[]`. |
-| `DispatchResult` / `ToolInfo` | types | `{ isError: boolean; text: string }` and the advertised tool shape. |
+| `DispatchResult` / `ToolInfo` | types | `{ isError: boolean; content: ContentPart[]; meta?: Record<string, unknown> }` and the advertised tool shape. |
 
 ## ajv setup
 
@@ -52,11 +52,14 @@ The five steps, in order (see [architecture.md](../architecture.md) for the diag
    indistinguishable from "does not exist".
 2. **Validate** — `validators.get(name)!(args)`. Failure → `invalid_input` with the joined
    `errorsText` (or `"invalid arguments"` if empty).
-3. **Handle** — `await tool.handler(args, config)` returns a `string` (already JSON where the tool
-   emits structured output, e.g. `bash`).
-4. **Bound** — `tool.bounded ? text : bound(text, config.maxOutputBytes)`. Only `bash` sets
-   `bounded: true` (it does its own `boundOrSpill` per stream); every other tool's output goes
-   through the outer `bound()`. See [internals/output-and-spill.md](./output-and-spill.md).
+3. **Handle** — `await tool.handler(args, config)` returns a `string | ToolResult`; `normalizeOutput`
+   collapses it to `{ content, meta? }` (a bare `string` becomes `{ content }`, already JSON where the
+   tool emits structured output, e.g. `bash`). A `ToolResult.meta` (e.g. the editing tools' `meta.diff`)
+   passes straight through onto the `DispatchResult`.
+4. **Bound** — `content` is coerced to parts (`string → [textPart(content)]`) and passed through
+   `boundParts`: each text part is `bound()` to `config.maxOutputBytes` unless `tool.bounded` is set.
+   Only `bash` sets `bounded: true` (it does its own `boundOrSpill` per stream); image parts and
+   `meta` are never bounded. See [internals/output-and-spill.md](./output-and-spill.md).
 5. **Catch** — any throw → `serializeError(err)`. A `ToolError` becomes
    `{ error: code, message, ...fields }`; anything else is logged to stderr and returned as the
    opaque `{ error: "internal", message: "internal error" }`. See [internals/errors.md](./errors.md).

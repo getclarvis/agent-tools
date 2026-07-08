@@ -15,7 +15,7 @@
 ┌───────────────────────────────────────────────────────────┐
 │ DISPATCH                                                    │
 │   select surface → validate (ajv) → run handler →           │
-│   bound output → serialize errors      →  { isError, text } │
+│   bound output → serialize errors   →  { isError, content } │
 └───────────────┬─────────────────────────────────────────────┘
                 │  handler(args, config)
                 ▼
@@ -56,15 +56,17 @@ Each `callTool(name, args)` runs the same five steps:
    defaults are filled in). A failure → `invalid_input` with the ajv detail.
 3. **Run the handler.** Call `handler(args, config)`. This is where the filesystem or a child process
    is touched — and where [confinement](/explanation/confinement) rejects an escaping path.
-4. **Bound the output.** Truncate the result to `maxOutputBytes` on a UTF-8 boundary (unless the tool
-   is marked `bounded`, i.e. it already capped its own output — `bash`, which spills overflow to
+4. **Bound the output.** Truncate each text part to `maxOutputBytes` on a UTF-8 boundary (unless the
+   tool is marked `bounded`, i.e. it already capped its own output — `bash`, which spills overflow to
    disk). See [Limits & spill](/guide/limits-and-spill).
-5. **Serialize.** Return `{ isError: false, text }` on success; on a thrown `ToolError`, return
-   `{ isError: true, text }` with the JSON [error envelope](/reference/error-codes). A non-`ToolError`
-   is logged to stderr and returned as a generic `internal` error.
+5. **Serialize.** Return `{ isError: false, content }` on success — plus an optional `meta` sidecar
+   (e.g. the editing tools' `meta.diff`); on a thrown `ToolError`, return `{ isError: true, content }`
+   with the JSON [error envelope](/reference/error-codes). A non-`ToolError` is logged to stderr and
+   returned as a generic `internal` error.
 
-The result is always `{ isError, text }` — the pipeline converts every outcome, success or failure,
-into that one shape.
+The result is always `{ isError, content }` (with an optional `meta`) — the pipeline converts every
+outcome, success or failure, into that one shape. `content` is an array of parts; `contentText`
+flattens the text parts.
 
 ## Stateless calls, atomic writes
 

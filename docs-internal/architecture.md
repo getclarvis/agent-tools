@@ -81,13 +81,14 @@ The whole request path is [`dispatch`](https://github.com/getclarvis/agent-tools
 2. **Validate** with the tool's precompiled ajv validator (`ajv` is `new Ajv({ allErrors: true,
    useDefaults: true })`; one validator per tool is compiled at module load). On failure the joined
    `errorsText` becomes an `invalid_input` envelope.
-3. **Run** `await tool.handler(args, config)`.
-4. **Bound** the returned text: `tool.bounded ? text : bound(text, config.maxOutputBytes)`. Tools
-   that manage their own output ceiling (only `bash` sets `bounded: true`) opt out of the outer
-   `bound()`.
+3. **Run** `await tool.handler(args, config)`, then `normalizeOutput` collapses its `string | ToolResult`
+   return to `{ content, meta? }` (a bare `string` becomes `{ content }`).
+4. **Bound** the content parts: each text part is `bound()` to `config.maxOutputBytes` unless the tool
+   manages its own output ceiling (only `bash` sets `bounded: true`, opting out of the outer `bound()`).
+   Any `meta` sidecar passes through untouched.
 5. **Serialize errors**: any throw is caught and passed to `serializeError`, which emits a JSON
    envelope for a `ToolError` and a redacted `{ "error": "internal" }` (plus a stderr note) for
-   anything else. `dispatch` never throws for tool-level problems — it returns `{ isError, text }`.
+   anything else. `dispatch` never throws for tool-level problems — it returns `{ isError, content, meta? }`.
 
 See [internals/dispatch.md](./internals/dispatch.md).
 

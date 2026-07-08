@@ -2,7 +2,9 @@ import { promises as fs } from "node:fs";
 import { ToolError, fsError } from "../errors.js";
 import { resolvePath, displayPath } from "../lib/paths.js";
 import { writeAtomic, withFileLock } from "../lib/atomic.js";
+import { readTextFile } from "../lib/textfile.js";
 import { syntaxWarning } from "../lib/syntax-annotate.js";
+import { unifiedDiff } from "../lib/unified-diff.js";
 import type { ToolDef } from "./types.js";
 
 export const writeFile: ToolDef = {
@@ -48,6 +50,16 @@ export const writeFile: ToolDef = {
         if (e.code !== "ENOENT") throw fsError(e, relPath);
       }
 
+      let before: string | undefined;
+      if (existed) {
+        try {
+          const prior = await readTextFile(target, relPath, config.maxFileBytes);
+          if (prior.encoding === "utf8") before = prior.content;
+        } catch {
+          before = undefined;
+        }
+      }
+
       try {
         await writeAtomic(target, content);
       } catch (err) {
@@ -57,10 +69,11 @@ export const writeFile: ToolDef = {
 
       const bytes = Buffer.byteLength(content, "utf8");
       const rel = displayPath(target, config.workspaceRoot);
-      return (
+      const text =
         `Wrote ${bytes} bytes to ${rel} (${existed ? "overwritten" : "created"}).` +
-        (await syntaxWarning(rel, content, config))
-      );
+        (await syntaxWarning(rel, content, config));
+      const diff = before !== undefined ? unifiedDiff(rel, before, content) : undefined;
+      return diff ? { content: text, meta: { diff } } : { content: text };
     });
   },
 };

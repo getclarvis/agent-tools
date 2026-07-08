@@ -21,7 +21,7 @@ import {
   DEFAULT_MAX_MONITORS,
   type ServerConfig,
 } from "../../src/config.js";
-import { contentText, type ContentPart } from "../../src/tools/content.js";
+import { contentText, type ContentPart, type ToolResult } from "../../src/tools/content.js";
 
 export function makeWorkspace(): string {
   return mkdtempSync(path.join(tmpdir(), "clarvis-test-"));
@@ -56,10 +56,17 @@ export interface CallResult {
   json: Record<string, unknown>;
 
   content: ContentPart[];
+
+  meta?: Record<string, unknown>;
 }
 
 export function resultText(content: ContentPart[]): string {
   return contentText(content);
+}
+
+export function handlerText(out: string | ToolResult): string {
+  const content = typeof out === "string" ? out : out.content;
+  return typeof content === "string" ? content : resultText(content);
 }
 
 export async function callTool(
@@ -74,7 +81,13 @@ export async function callTool(
   try {
     json = JSON.parse(text) as Record<string, unknown>;
   } catch {}
-  return { isError: r.isError, text, json, content: r.content };
+  return {
+    isError: r.isError,
+    text,
+    json,
+    content: r.content,
+    ...(r.meta ? { meta: r.meta } : {}),
+  };
 }
 
 export function write(root: string, rel: string, content: string): string {

@@ -1,6 +1,6 @@
 {
   "name": "@clarvis/agent-tools",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A minimal, opinionated set of coding tools for driving an LLM agent over a workspace — read/write/edit/patch/move, batch read, grep/glob/diff, project-wide regex replace, bash + background monitors, and tree-sitter-powered outline/check_syntax — usable as a plain library.",
   "license": "MIT",
   "keywords": [

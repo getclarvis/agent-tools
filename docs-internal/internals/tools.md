@@ -21,12 +21,21 @@ interface ToolDef {
   description: string;
   inputSchema: Record<string, unknown>;          // JSON Schema, ajv-compiled at load
   bounded?: boolean;                              // true → tool owns its output ceiling
-  handler: (args, config: ServerConfig) => Promise<string>;
+  handler: (args, config: ServerConfig) => Promise<string | ToolResult>;
+}
+
+interface ToolResult {
+  content: string | ContentPart[];               // string is sugar for a single text part
+  meta?: Record<string, unknown>;                // structured sidecar → DispatchResult.meta
 }
 ```
 
-The handler always returns a `string`. Where a tool has structured output (`bash`), it returns
-`JSON.stringify(...)`. Errors are thrown as `ToolError` and serialized by `dispatch`, never returned.
+Most handlers return a bare `string` (sugar for a single text part); `read_image` returns a
+`ToolResult` wrapping image parts, and the editing tools (`edit_file`, `multi_edit`, `write_file`,
+`replace`) return a `ToolResult` carrying `meta.diff` — a real unified diff for a client, never shown
+to the model. Where a tool has structured text output (`bash`), it returns `JSON.stringify(...)`.
+`dispatch` collapses the union via `normalizeOutput` (a bare `string` becomes `{ content }`); errors
+are thrown as `ToolError` and serialized by `dispatch`, never returned.
 
 ## The registry
 

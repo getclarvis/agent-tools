@@ -5,8 +5,10 @@ import { reencode } from "../lib/text.js";
 import { readTextFile } from "../lib/textfile.js";
 import { findCascadeMatch, scanLineBlocks, trimEnds } from "../lib/match-cascade.js";
 import { syntaxWarning } from "../lib/syntax-annotate.js";
+import { unifiedDiff } from "../lib/unified-diff.js";
 import type { ServerConfig } from "../config.js";
 import type { ToolDef } from "./types.js";
+import type { ToolResult } from "./content.js";
 
 export async function editFileLocked(
   target: string,
@@ -14,7 +16,7 @@ export async function editFileLocked(
   config: ServerConfig,
   transform: (content: string) => string,
   message: (rel: string) => string,
-): Promise<string> {
+): Promise<ToolResult> {
   return withFileLock(target, async () => {
     const decoded = await readTextFile(target, relPath, config.maxFileBytes);
     if (decoded.encoding !== "utf8") {
@@ -28,7 +30,9 @@ export async function editFileLocked(
     const newText = transform(decoded.content);
     await writeAtomic(target, reencode(newText, decoded));
     const rel = displayPath(target, config.workspaceRoot);
-    return message(rel) + (await syntaxWarning(rel, newText, config));
+    const content = message(rel) + (await syntaxWarning(rel, newText, config));
+    const diff = unifiedDiff(rel, decoded.content, newText);
+    return diff ? { content, meta: { diff } } : { content };
   });
 }
 

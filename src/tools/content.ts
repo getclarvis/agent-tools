@@ -11,6 +11,11 @@ export interface ImagePart {
 
 export type ContentPart = TextPart | ImagePart;
 
+export interface ToolResult {
+  content: string | ContentPart[];
+  meta?: Record<string, unknown>;
+}
+
 export function textPart(text: string): TextPart {
   return { type: "text", text };
 }

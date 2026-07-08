@@ -58,7 +58,7 @@ export type {
   ElicitRequest,
   Elicit,
 } from "./guard/index.js";
-export type { ContentPart, TextPart, ImagePart } from "./tools/content.js";
+export type { ContentPart, TextPart, ImagePart, ToolResult } from "./tools/content.js";
 export { contentText } from "./tools/content.js";
 
 export { ToolError, serializeError, fsError } from "./errors.js";

@@ -268,6 +268,13 @@ does not parse. Advisory only: the write always succeeds, the warning never beco
 files without a grammar, oversized content (> 1 MB), or a slow parse are silently skipped
 (`apply_patch` checks at most five files per patch).
 
+**Structured diff.** `write_file` (on **overwrite**), `edit_file`, `multi_edit`, and `replace` (on
+apply) also set [`meta.diff`](/reference/core-api#dispatch) on the result to a real unified diff of
+the change (true line numbers, three lines of context). It is a sidecar for a client to render — the
+model-facing `content` stays the short prose summary. Absent when there is nothing to compare (a
+brand-new `write_file`, or an overwrite whose prior content is binary/unreadable). `apply_patch`
+emits no `meta.diff` (its input already is the diff).
+
 **Errors.** `not_found` (missing parent), `not_a_file`, `path_escape`, `io_error`.
 
 ## edit_file

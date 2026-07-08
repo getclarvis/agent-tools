@@ -36,7 +36,8 @@ import { resolveConfig, dispatch, listTools } from "@clarvis/agent-tools";
 const config = resolveConfig({ workspaceRoot: process.cwd() });
 
 const surface = listTools(config); // ToolInfo[]
-const { isError, text } = await dispatch("grep", { pattern: "TODO" }, config);
+const { isError, content } = await dispatch("grep", { pattern: "TODO" }, config);
+// content is ContentPart[]; contentText(content) flattens the text parts into a string.
 ```
 
 For a process that reads its config from **argv and environment** instead of an options object, use
@@ -81,7 +82,7 @@ createServer(async (req, res) => {
 ```
 
 `dispatch` does the validation (ajv, against each tool's JSON Schema), output bounding, and error
-serialization for you — the transport just moves `{ isError, text }` across the wire.
+serialization for you — the transport just moves `{ isError, content, meta? }` across the wire.
 
 ## The raw registry
 

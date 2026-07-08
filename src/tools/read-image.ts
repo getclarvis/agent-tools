@@ -36,6 +36,6 @@ export const readImage: ToolDef = {
         { path: relPath },
       );
     }
-    return [imagePart(buf.toString("base64"), mimeType)];
+    return { content: [imagePart(buf.toString("base64"), mimeType)] };
   },
 };
