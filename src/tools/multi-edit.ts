@@ -29,7 +29,6 @@ export const multiEdit: ToolDef = {
           properties: {
             old_string: {
               type: "string",
-              minLength: 1,
               description:
                 "Exact text to find, verbatim and without read_file's line-number prefixes. " +
                 "Matched against the result of the previous edit. Not a regex.",
@@ -73,6 +72,9 @@ export const multiEdit: ToolDef = {
           const spec = edits[i];
           if (spec === undefined) continue;
           try {
+            if (spec.old_string === "") {
+              throw new ToolError("invalid_input", "old_string must not be empty.");
+            }
             const r = applyEdit(text, spec);
             text = r.text;
             if (r.fuzzy) fuzzyCount++;

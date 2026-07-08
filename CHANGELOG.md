@@ -7,6 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Dropped `minLength: 1` from `multi_edit`'s nested `edits[].old_string` schema.** A `minLength`
+  on a string nested inside an array-of-objects drives some grammar-constrained decoders (guided
+  JSON on OpenAI-compatible gateways, e.g. DeepInfra serving GLM) to emit corrupted tool-call
+  argument strings — backticks, hallucinated ternaries, placeholder tokens (`%LINEBREAK%`, `{q}`),
+  stray `omitempty`, mangled class names — so the `old_string` never matches and the edit loops on
+  `no_match`. Isolation across the same model showed the corruption vanishes the moment this one
+  keyword is removed; the flat `edit_file` schema is unaffected and keeps its `minLength`. The
+  empty-`old_string` rejection is now enforced at runtime (`invalid_input`, with the edit index).
+
 ## [0.4.0]
 
 ### Added
