@@ -52,8 +52,12 @@ Each `callTool(name, args)` runs the same five steps:
 
 1. **Select & look up.** Find `name` in the active surface. Unknown (or hidden by `readOnly`) →
    an `isError` result with code `not_found`. No exception.
-2. **Validate.** Check `args` against the tool's JSON Schema with ajv (`allErrors`, `useDefaults`, so
-   defaults are filled in). A failure → `invalid_input` with the ajv detail.
+2. **Validate.** Check `args` against the tool's JSON Schema with ajv (`allErrors`, `useDefaults`,
+   `coerceTypes` — so defaults are filled in and string-encoded numbers/booleans are coerced).
+   Extra (out-of-schema) fields are silently ignored. A failure → `invalid_input` with the ajv detail.
+   The validation philosophy is: **strict about fields that affect behavior and safety, tolerant of
+   harmless LLM artifacts** such as extra arguments and string-encoded primitive values — a
+   well-intentioned call rarely produces `invalid_input`.
 3. **Run the handler.** Call `handler(args, config)`. This is where the filesystem or a child process
    is touched — and where [confinement](/explanation/confinement) rejects an escaping path.
 4. **Bound the output.** Truncate each text part to `maxOutputBytes` on a UTF-8 boundary (unless the

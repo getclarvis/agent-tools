@@ -126,9 +126,10 @@ describe("grep (in-process)", () => {
     expect(r.text).not.toContain("call again with offset");
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
     const r = await callTool("grep", { pattern: "foo", bogus: 1 }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("a.txt");
   });
 });
 
@@ -394,10 +395,10 @@ describe("grep asymmetric context and pagination (in-process)", () => {
     expect(r.text).toBe("(no results at offset 50; 1 total)");
   });
 
-  it("rejects head_limit below the minimum of 1", async () => {
+  it("treats head_limit 0 as unlimited (no rejection)", async () => {
     write(root, "one.txt", "foo\n");
     const r = await callTool("grep", { pattern: "foo", head_limit: 0 }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
   });
 });
 

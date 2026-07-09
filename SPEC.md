@@ -158,8 +158,8 @@ or dir, default workspace root); `glob` (restrict to matching files);
 `files_with_matches`); `ignore_case` (boolean, default false); `context`
 (integer, both sides, content mode only, default 0); `before_context` /
 `after_context` (integers, content mode only — `ripgrep` `-B`/`-A`; each overrides
-`context` for that side); `head_limit` (integer ≥ 1, max results to return — files in
-`files_with_matches`/`count`, matches in `content`; omit for unlimited, still
+`context` for that side); `head_limit` (integer ≥ 0, max results to return — files in
+`files_with_matches`/`count`, matches in `content`; `0` or omit for unlimited, still
 byte-bounded); `offset` (integer ≥ 0, 0-based number of leading results to skip —
 **a result offset, not `read_file`'s line offset**); `multiline` (boolean, default
 false — match across line boundaries, ripgrep `--multiline --multiline-dotall`).
@@ -229,8 +229,8 @@ slice is read, so `file_stat` works on files larger than `MAX_FILE_BYTES`.
 
 Print a directory as an indented tree, recursively.
 
-**Input:** `path` (string, default workspace root); `depth` (integer ≥ 1, max levels below the root;
-omit for unlimited); `respect_gitignore` (boolean, default true).
+**Input:** `path` (string, default workspace root); `depth` (integer ≥ 0, max levels below the root;
+`0` or omit for the default of 4); `respect_gitignore` (boolean, default true).
 
 **Behavior:** Walks the directory depth-first. Directories are rendered with a trailing `/`, symlinks
 with a trailing `@`, and files with a byte size. Entries are ordered directories-first then by name.

@@ -22,7 +22,6 @@ export const readImage: ToolDef = {
       },
     },
     required: ["path"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const relPath = args.path as string;

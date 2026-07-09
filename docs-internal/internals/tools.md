@@ -97,8 +97,9 @@ is a `find` by name. Order in `tools` is the order `listTools` advertises them.
 
 - **Handlers stay thin.** Push shared behavior into `lib/` so both grep backends, all four writers, and
   the two edit tools stay consistent — a fix in a `lib/` primitive should fix every tool that uses it.
-- **Schema is the input contract.** `additionalProperties: false` and explicit `required` keep the
-  ajv validator strict; rely on `useDefaults` for optional params rather than reading `?? default` in
-  the handler where possible.
+- **Schema is the input contract.** Schemas omit `additionalProperties: false` (the ajv default,
+  `true`) so extra fields from an LLM are tolerated and silently ignored by handlers, which read
+  only the named keys. Explicit `required` still guards mandatory params; rely on `useDefaults` for
+  optional params rather than reading `?? default` in the handler where possible.
 - **Adding a tool:** see [internals/dispatch.md](./dispatch.md#maintainer-notes) for the registry +
   validator + test + docs checklist.

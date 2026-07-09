@@ -46,12 +46,10 @@ export const multiEdit: ToolDef = {
             },
           },
           required: ["old_string", "new_string"],
-          additionalProperties: false,
         },
       },
     },
     required: ["path", "edits"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const target = resolvePath(

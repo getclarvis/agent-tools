@@ -79,6 +79,10 @@ A few things to know when you feed results back:
 - **Errors are self-describing.** On failure, `content` is a single text part holding a JSON envelope
   `{ "error": "<code>", "message": "…" }`. Passing it straight back lets the model correct itself
   (e.g. fix an `ambiguous_match` by adding more context to `old_string`).
+- **Validation is LLM-tolerant.** The tools are strict about fields that affect behavior and safety,
+  but tolerant of harmless LLM artifacts such as extra arguments and string-encoded primitive values.
+  A well-intentioned call rarely produces `invalid_input` — you do not need to pre-validate the
+  model's arguments before dispatching.
 
 ## Running calls in parallel
 

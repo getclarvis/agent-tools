@@ -33,7 +33,6 @@ export const globTool: ToolDef = {
       },
     },
     required: ["pattern"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const pattern = args.pattern as string;

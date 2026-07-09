@@ -29,7 +29,6 @@ export const writeFile: ToolDef = {
       },
     },
     required: ["path", "content"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const relPath = args.path as string;

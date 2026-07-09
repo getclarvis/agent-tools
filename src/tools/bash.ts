@@ -73,7 +73,7 @@ export const bash: ToolDef = {
       cwd: { type: "string", description: "Working directory. Default: workspace root." },
       timeout_ms: {
         type: "integer",
-        minimum: 1,
+        minimum: 0,
         description:
           "Max run time in ms. Default: BASH_TIMEOUT_MS (120000); may be raised up to " +
           "BASH_TIMEOUT_MAX_MS (600000) for a long build/test/install. On timeout the process " +
@@ -81,7 +81,6 @@ export const bash: ToolDef = {
       },
     },
     required: ["command"],
-    additionalProperties: false,
   },
   async handler(args, config, signal) {
     const command = args.command as string;
@@ -89,7 +88,7 @@ export const bash: ToolDef = {
     const cwd = cwdArg
       ? resolvePath(cwdArg, config.workspaceRoot, config.confineToWorkspace)
       : config.workspaceRoot;
-    const requestedTimeoutMs = (args.timeout_ms as number | undefined) ?? config.bashTimeoutMs;
+    const requestedTimeoutMs = (args.timeout_ms as number | undefined) || config.bashTimeoutMs;
     const timeoutMs = Math.min(requestedTimeoutMs, config.bashTimeoutMaxMs, MAX_TIMER_DELAY_MS);
 
     await statDirectory(cwd, cwdArg ?? cwd);

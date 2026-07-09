@@ -139,7 +139,7 @@ skipped, the full git ignore stack respected, binary and oversized files skipped
 | `context`        | integer | no       | `0`                  | Context lines both sides (content mode only).                                             |
 | `before_context` | integer | no       | —                    | Lines before each match (content mode); overrides `context` for that side.                |
 | `after_context`  | integer | no       | —                    | Lines after each match (content mode); overrides `context` for that side.                 |
-| `head_limit`     | integer | no       | —                    | Max results to return (files, or matches in content mode). ≥ 1; omit for unlimited.       |
+| `head_limit`     | integer | no       | —                    | Max results to return (files, or matches in content mode). ≥ 0; `0` or omit for unlimited. |
 | `offset`         | integer | no       | `0`                  | 0-based number of **results** to skip — a result offset, not `read_file`'s line offset.   |
 
 **Output.** `files_with_matches` prints one file path per line; `content` prints `path:line:text`
@@ -190,7 +190,7 @@ a byte size.
 | Input               | Type    | Required | Default        | Notes                                                           |
 | ------------------- | ------- | -------- | -------------- | --------------------------------------------------------------- |
 | `path`              | string  | no       | workspace root | Root directory of the tree.                                     |
-| `depth`             | integer | no       | unlimited      | Maximum levels to descend below the root (≥ 1).                 |
+| `depth`             | integer | no       | 4              | Maximum levels to descend below the root (≥ 0; `0` or omit = default of 4). Max 20.          |
 | `respect_gitignore` | boolean | no       | `true`         | Skip files ignored by the git ignore stack, and the `.git/` dir.|
 
 **Output.** An indented ASCII tree rooted at `path`. Symlinked directories are **listed but not

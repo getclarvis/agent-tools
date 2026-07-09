@@ -329,9 +329,10 @@ describe("bash", () => {
   });
 
   describe("schema validation", () => {
-    it("rejects out-of-schema input with invalid_input", async () => {
+    it("ignores out-of-schema extra fields", async () => {
       const r = await callTool("bash", { command: "echo x", bogus: 1 }, config);
-      expect(r.json.error).toBe("invalid_input");
+      expect(r.isError).toBe(false);
+      expect(r.json.exit_code).toBe(0);
     });
   });
 });

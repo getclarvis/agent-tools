@@ -22,7 +22,6 @@ export const listDir: ToolDef = {
       },
     },
     required: [],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const rel = (args.path as string | undefined) ?? ".";

@@ -31,7 +31,6 @@ export const move: ToolDef = {
       },
     },
     required: ["source", "destination"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const srcRel = args.source as string;

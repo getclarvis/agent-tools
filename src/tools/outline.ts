@@ -31,7 +31,6 @@ export const outline: ToolDef = {
       },
     },
     required: ["path"],
-    additionalProperties: false,
   },
   async handler(args, config, signal) {
     const rel = args.path as string;

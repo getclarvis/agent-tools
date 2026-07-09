@@ -68,8 +68,9 @@ describe("mkdir", () => {
     expect(r.json.error).toBe("path_escape");
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
     const r = await callTool("mkdir", { path: "a", bogus: true }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("Created directory a.");
   });
 });

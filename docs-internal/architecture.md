@@ -79,7 +79,7 @@ The whole request path is [`dispatch`](https://github.com/getclarvis/agent-tools
    tree-sitter peer is absent) returns `not_found` — hiding is indistinguishable from "does not
    exist" on purpose.
 2. **Validate** with the tool's precompiled ajv validator (`ajv` is `new Ajv({ allErrors: true,
-   useDefaults: true })`; one validator per tool is compiled at module load). On failure the joined
+   useDefaults: true, coerceTypes: true })`; one validator per tool is compiled at module load). On failure the joined
    `errorsText` becomes an `invalid_input` envelope.
 3. **Run** `await tool.handler(args, config)`, then `normalizeOutput` collapses its `string | ToolResult`
    return to `{ content, meta? }` (a bare `string` becomes `{ content }`).

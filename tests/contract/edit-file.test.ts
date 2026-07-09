@@ -184,14 +184,15 @@ describe("edit_file", () => {
     expect(read(root, "c.txt")).toBe("ONE TWO");
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
     write(root, "f.txt", "x");
     const r = await callTool(
       "edit_file",
       { path: "f.txt", old_string: "x", new_string: "y", bogus: 1 },
       config,
     );
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(read(root, "f.txt")).toBe("y");
   });
 
   it("on no_match, flags a pasted read_file line-number prefix", async () => {

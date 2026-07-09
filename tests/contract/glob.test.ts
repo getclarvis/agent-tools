@@ -110,9 +110,9 @@ describe("glob", () => {
     expect(r.json.error).toBe("not_found");
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
     const r = await callTool("glob", { pattern: "*", bogus: 1 }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
   });
 
   it("surfaces a failed file listing as invalid_input", async () => {

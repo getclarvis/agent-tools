@@ -108,8 +108,10 @@ describe("file_stat", () => {
     expect(r.json.error).toBe("path_escape");
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
+    write(root, "a", "x");
     const r = await callTool("file_stat", { path: "a", bogus: true }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(r.json.type).toBe("file");
   });
 });

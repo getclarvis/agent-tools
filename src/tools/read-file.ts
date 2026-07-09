@@ -31,20 +31,19 @@ export const readFile: ToolDef = {
       },
       limit: {
         type: "integer",
-        minimum: 1,
+        minimum: 0,
         description:
           "Max number of lines to return. Default 2000. Page through a long file by repeating " +
           "with offset advanced per the footer.",
       },
     },
     required: ["path"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const relPath = args.path as string;
     const target = resolvePath(relPath, config.workspaceRoot, config.confineToWorkspace);
     const offset = (args.offset as number | undefined) ?? 1;
-    const limit = (args.limit as number | undefined) ?? DEFAULT_LIMIT;
+    const limit = (args.limit as number | undefined) || DEFAULT_LIMIT;
 
     const text = (await readTextFile(target, relPath, config.maxFileBytes)).content;
 

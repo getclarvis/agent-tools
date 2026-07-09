@@ -109,14 +109,13 @@ export const monitorStart: ToolDef = {
       },
       ready_timeout_ms: {
         type: "integer",
-        minimum: 1,
+        minimum: 0,
         description:
           "Max time to wait for ready_when, in ms. Default: MONITOR_READY_TIMEOUT_MS (30000). " +
           "Ignored unless ready_when is set.",
       },
     },
     required: ["command"],
-    additionalProperties: false,
   },
   async handler(args, config, signal) {
     const command = args.command as string;
@@ -129,7 +128,7 @@ export const monitorStart: ToolDef = {
     const readyWhen = args.ready_when as string | undefined;
     const readyRe = readyWhen === undefined ? undefined : compileRegex(readyWhen, "ready_when");
     const readyTimeoutMs = Math.min(
-      (args.ready_timeout_ms as number | undefined) ?? config.monitorReadyTimeoutMs,
+      (args.ready_timeout_ms as number | undefined) || config.monitorReadyTimeoutMs,
       MAX_TIMER_DELAY_MS,
     );
 
@@ -223,7 +222,6 @@ export const monitorPoll: ToolDef = {
       },
     },
     required: ["id"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const id = args.id as string;
@@ -277,7 +275,6 @@ export const monitorStop: ToolDef = {
       id: { type: "string", description: "Monitor id returned by monitor_start." },
     },
     required: ["id"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const id = args.id as string;
@@ -302,7 +299,6 @@ export const monitorList: ToolDef = {
   inputSchema: {
     type: "object",
     properties: {},
-    additionalProperties: false,
   },
   async handler(args, config) {
     const metas = await listSidecars(config.workspaceRoot);

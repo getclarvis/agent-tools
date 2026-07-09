@@ -28,7 +28,6 @@ export const checkSyntax: ToolDef = {
       },
     },
     required: ["path"],
-    additionalProperties: false,
   },
   async handler(args, config, signal) {
     const rel = args.path as string;
