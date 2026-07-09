@@ -7,6 +7,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0]
+
+### Changed
+
+- **Relaxed input validation for LLM ergonomics.** Three changes that make the tools more forgiving
+  of the ways LLMs actually call them, without changing any successful-call behavior:
+  - **`coerceTypes: true` on the AJV validator.** String-encoded numbers/booleans (e.g.
+    `multiline: "true"` instead of `true`, `limit: "100"` instead of `100`) are now coerced to the
+    declared type before validation, instead of being rejected as `invalid_input`.
+  - **Removed `additionalProperties: false` from all tool schemas.** Extra/unknown fields in a
+    tool-call argument object are now silently ignored (handlers only read named fields), instead of
+    being rejected as `invalid_input`. This is the most common cause of hard rejections in
+    grammar-constrained decoders that emit superfluous keys.
+  - **Lowered `minimum: 1` to `minimum: 0` on `grep.head_limit`, `tree.depth`, `bash.timeout_ms`,
+    `monitor.ready_timeout_ms`, and `read_file.limit`.** A value of `0` is now treated the same as
+    omitting the field (falls back to the default), instead of being rejected.
+
+### Fixed
+
+- **`tree.depth: 0` no longer behaves like `depth: 1`.** Previously `depth: 0` listed only the
+  immediate children of the root (identical to `depth: 1`) due to a missing `||` coercion. Now
+  `depth: 0` is treated as "unlimited depth", consistent with omitting the field and with the other
+  numeric limits that use the same `||` pattern.
+
 ## [0.4.1]
 
 ### Fixed
