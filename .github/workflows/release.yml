@@ -31,9 +31,10 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
 
-      # Trusted publishing (OIDC) requires npm >= 11.5.1; the version bundled with Node may be older.
-      - name: Upgrade npm for trusted publishing
-        run: npm install -g npm@latest
+      # Trusted publishing requires npm >= 11.5.1.
+      # Do not use npm@latest because npm@12 currently breaks provenance publishing.
+      - name: Pin npm for trusted publishing
+        run: npm install -g npm@11.6.2
 
       - name: Install dependencies
         # --ignore-scripts blocks dependency install/postinstall hooks (supply-chain dropper vector).
