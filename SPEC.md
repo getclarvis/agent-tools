@@ -230,7 +230,7 @@ slice is read, so `file_stat` works on files larger than `MAX_FILE_BYTES`.
 Print a directory as an indented tree, recursively.
 
 **Input:** `path` (string, default workspace root); `depth` (integer ≥ 0, max levels below the root;
-`0` or omit for unlimited); `respect_gitignore` (boolean, default true).
+`0` or omit for the default of 4); `respect_gitignore` (boolean, default true).
 
 **Behavior:** Walks the directory depth-first. Directories are rendered with a trailing `/`, symlinks
 with a trailing `@`, and files with a byte size. Entries are ordered directories-first then by name.

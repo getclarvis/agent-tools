@@ -55,6 +55,9 @@ function renderLabel(e: Entry): string {
   return `${e.name}\t${e.size}`;
 }
 
+const DEFAULT_TREE_DEPTH = 4;
+const MAX_TREE_DEPTH = 20;
+
 async function walk(
   dir: string,
   prefix: string,
@@ -87,9 +90,9 @@ export const tree: ToolDef = {
   name: "tree",
   description:
     "Print a directory as an indented tree (directories end with `/`, symlinks with `@`, files " +
-    "show a byte size). Recurses all the way down unless `depth` limits it; by default skips paths " +
-    "ignored by .gitignore and the .git/ directory. Symlinked directories are listed but not " +
-    "traversed. Output is byte-bounded. Use list_dir for one level, glob to match files by pattern.",
+    "show a byte size). Recurses up to `depth` levels (default 4) unless a larger `depth` is given; " +
+    "by default skips paths ignored by .gitignore and the .git/ directory. Symlinked directories are " +
+    "listed but not traversed. Output is byte-bounded. Use list_dir for one level, glob to match files by pattern.",
   inputSchema: {
     type: "object",
     properties: {
@@ -102,7 +105,7 @@ export const tree: ToolDef = {
       depth: {
         type: "integer",
         minimum: 0,
-        description: "Maximum levels to descend below the root. Omit for unlimited.",
+        description: "Maximum levels to descend below the root. 0 or omit for the default (4).",
       },
       respect_gitignore: {
         type: "boolean",
@@ -116,7 +119,8 @@ export const tree: ToolDef = {
   async handler(args, config) {
     const rel = (args.path as string | undefined) ?? ".";
     const target = resolvePath(rel, config.workspaceRoot, config.confineToWorkspace);
-    const maxDepth = (args.depth as number | undefined) || undefined;
+    const requestedDepth = (args.depth as number | undefined) || DEFAULT_TREE_DEPTH;
+    const maxDepth = Math.min(requestedDepth, MAX_TREE_DEPTH);
     const respectGitignore = args.respect_gitignore as boolean;
 
     await statDirectory(target, rel);

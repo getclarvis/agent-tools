@@ -190,7 +190,7 @@ a byte size.
 | Input               | Type    | Required | Default        | Notes                                                           |
 | ------------------- | ------- | -------- | -------------- | --------------------------------------------------------------- |
 | `path`              | string  | no       | workspace root | Root directory of the tree.                                     |
-| `depth`             | integer | no       | unlimited      | Maximum levels to descend below the root (≥ 0; `0` or omit = unlimited).                |
+| `depth`             | integer | no       | 4              | Maximum levels to descend below the root (≥ 0; `0` or omit = default of 4). Max 20.          |
 | `respect_gitignore` | boolean | no       | `true`         | Skip files ignored by the git ignore stack, and the `.git/` dir.|
 
 **Output.** An indented ASCII tree rooted at `path`. Symlinked directories are **listed but not

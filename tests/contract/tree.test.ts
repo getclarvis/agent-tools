@@ -92,7 +92,7 @@ describe("tree", () => {
     }
   });
 
-  it("treats depth 0 as unlimited (same as omitting depth)", async () => {
+  it("treats depth 0 as the default (4), not unlimited", async () => {
     write(root, "a/b/c.txt", "x");
     const r = await callTool("tree", { depth: 0 }, config);
     expect(r.isError).toBe(false);
