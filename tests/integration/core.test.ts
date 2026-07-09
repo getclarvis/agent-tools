@@ -54,9 +54,9 @@ describe("core / registry", () => {
     );
   });
 
-  it("every tool input schema sets additionalProperties: false", () => {
+  it("does not set additionalProperties: false (allows extra fields)", () => {
     for (const t of tools) {
-      expect(t.inputSchema.additionalProperties).toBe(false);
+      expect(t.inputSchema.additionalProperties).not.toBe(false);
     }
   });
 
@@ -85,18 +85,18 @@ describe("dispatch — input validation", () => {
     expect((r.json.message as string).length).toBeGreaterThan(0);
   });
 
-  it("returns invalid_input with a detail message when an arg is wrong-typed", async () => {
-    const r = await dispatch("read_file", { path: 123 }, config);
+  it("returns invalid_input when an arg is wrong-typed and not coercible", async () => {
+    const r = await dispatch("read_file", { path: {} }, config);
     expect(r.isError).toBe(true);
     const json = JSON.parse(resultText(r.content)) as Record<string, unknown>;
     expect(json.error).toBe("invalid_input");
     expect(json.message).not.toBe("invalid arguments");
   });
 
-  it("rejects an unknown argument as invalid_input", async () => {
+  it("ignores unknown arguments instead of rejecting them", async () => {
     const r = await dispatch("read_file", { path: "a.txt", bogus: true }, config);
-    expect(r.isError).toBe(true);
-    expect(JSON.parse(resultText(r.content))).toMatchObject({ error: "invalid_input" });
+    const json = JSON.parse(resultText(r.content)) as Record<string, unknown>;
+    expect(json.error).not.toBe("invalid_input");
   });
 });
 
@@ -148,7 +148,7 @@ describe("listTools surface", () => {
     for (const info of infos) {
       expect(typeof info.name).toBe("string");
       expect(typeof info.description).toBe("string");
-      expect(info.inputSchema.additionalProperties).toBe(false);
+      expect(info.inputSchema.additionalProperties).not.toBe(false);
     }
   });
 

@@ -88,9 +88,10 @@ describe("write_file", () => {
       expect(r.json.error).toBe("not_a_file");
     });
 
-    it("rejects out-of-schema input with invalid_input", async () => {
+    it("ignores out-of-schema extra fields", async () => {
       const r = await callTool("write_file", { path: "a.txt", content: "x", bogus: 1 }, config);
-      expect(r.json.error).toBe("invalid_input");
+      expect(r.isError).toBe(false);
+      expect(read(root, "a.txt")).toBe("x");
     });
   });
 });

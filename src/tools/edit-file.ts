@@ -194,7 +194,6 @@ export const editFile: ToolDef = {
       },
     },
     required: ["path", "old_string", "new_string"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const target = resolvePath(

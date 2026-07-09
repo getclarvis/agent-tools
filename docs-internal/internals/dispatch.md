@@ -24,17 +24,19 @@ control flow, the ajv setup, and the surface-selection rules the published pages
 
 ## ajv setup
 
-At module load, `core.ts` constructs a single `Ajv({ allErrors: true, useDefaults: true })` and
+At module load, `core.ts` constructs a single `Ajv({ allErrors: true, useDefaults: true, coerceTypes: true })` and
 compiles one validator per tool into a `Map<string, ValidateFunction>`:
 
 ```ts
-const ajv = new Ajv({ allErrors: true, useDefaults: true });
+const ajv = new Ajv({ allErrors: true, useDefaults: true, coerceTypes: true });
 const validators = new Map<string, ValidateFunction>();
 for (const tool of tools) validators.set(tool.name, ajv.compile(tool.inputSchema));
 ```
 
 - **`useDefaults`** means a schema-level `default` is filled into `args` in place during validation —
   tools rely on this for optional numeric/boolean params.
+- **`coerceTypes`** means a string `"42"` or `"true"` is coerced to the declared `number`/`boolean`
+  before validation — LLMs frequently pass numbers and booleans as JSON strings.
 - **`allErrors`** collects every violation so `ajv.errorsText(errors, { separator: "; " })` can join
   them into one `invalid_input` message.
 - Ajv is loaded via `createRequire(import.meta.url)("ajv")` (CJS interop) — the default export is the

@@ -100,7 +100,6 @@ export const replace: ToolDef = {
       },
     },
     required: ["pattern", "replacement"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const pattern = args.pattern as string;

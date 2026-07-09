@@ -94,8 +94,9 @@ describe("list_dir", () => {
     }
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
     const r = await callTool("list_dir", { bogus: true }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("(empty directory)");
   });
 });

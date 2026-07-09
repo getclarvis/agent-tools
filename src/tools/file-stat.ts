@@ -28,7 +28,6 @@ export const fileStat: ToolDef = {
       },
     },
     required: ["path"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const rel = args.path as string;

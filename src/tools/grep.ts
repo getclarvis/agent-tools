@@ -92,7 +92,7 @@ export const grep: ToolDef = {
       },
       head_limit: {
         type: "integer",
-        minimum: 1,
+        minimum: 0,
         description:
           "Max number of results to return — files in files_with_matches/count modes, matches in " +
           "content mode. Omit for unlimited (output is still byte-bounded). Page by re-running " +
@@ -108,7 +108,6 @@ export const grep: ToolDef = {
       },
     },
     required: ["pattern"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const mode = args.output_mode as OutputMode;
@@ -116,7 +115,7 @@ export const grep: ToolDef = {
     const before = mode === "content" ? ((args.before_context as number | undefined) ?? ctx) : 0;
     const after = mode === "content" ? ((args.after_context as number | undefined) ?? ctx) : 0;
     const offset = args.offset as number;
-    const headLimit = args.head_limit as number | undefined;
+    const headLimit = (args.head_limit as number | undefined) || undefined;
     const multiline = args.multiline as boolean;
 
     const searchRoot = resolvePath(

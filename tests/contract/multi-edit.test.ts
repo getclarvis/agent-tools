@@ -80,14 +80,15 @@ describe("multi_edit", () => {
     expect(r.json.error).toBe("invalid_input");
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
     write(root, "f.txt", "x");
     const r = await callTool(
       "multi_edit",
       { path: "f.txt", edits: [{ old_string: "x", new_string: "y" }], bogus: 1 },
       config,
     );
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(read(root, "f.txt")).toBe("y");
   });
 
   it("flows a whitespace-tolerant edit through and discloses it", async () => {

@@ -321,9 +321,12 @@ describe("apply_patch", () => {
       expect(read(root, "ts.txt")).toBe("X\ny\n");
     });
 
-    it("rejects out-of-schema input with invalid_input", async () => {
-      const r = await callTool("apply_patch", { patch: "x", bogus: 1 }, config);
-      expect(r.json.error).toBe("invalid_input");
+    it("ignores out-of-schema extra fields", async () => {
+      write(root, "f.txt", "x\n");
+      const patch = `--- a/f.txt\n+++ b/f.txt\n@@ -1,1 +1,1 @@\n-x\n+y\n`;
+      const r = await callTool("apply_patch", { patch, bogus: 1 }, config);
+      expect(r.isError).toBe(false);
+      expect(read(root, "f.txt")).toBe("y\n");
     });
 
     it("refuses multiple blocks targeting the same file (no silent last-wins)", async () => {

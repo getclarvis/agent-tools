@@ -73,8 +73,10 @@ describe("remove", () => {
     expect(r.json.error).toBe("path_escape");
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
+    write(root, "a.txt", "x");
     const r = await callTool("remove", { path: "a.txt", bogus: true }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(exists(root, "a.txt")).toBe(false);
   });
 });

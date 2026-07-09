@@ -25,7 +25,6 @@ export const diffTool: ToolDef = {
       },
     },
     required: ["from", "to"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const fromRel = args.from as string;

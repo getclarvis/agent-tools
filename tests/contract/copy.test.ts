@@ -153,9 +153,11 @@ describe("copy", () => {
       expect(r.json.error).toBe("path_escape");
     });
 
-    it("rejects out-of-schema input with invalid_input", async () => {
+    it("ignores out-of-schema extra fields", async () => {
+      write(root, "a.txt", "src");
       const r = await callTool("copy", { source: "a.txt", destination: "b.txt", bogus: 1 }, config);
-      expect(r.json.error).toBe("invalid_input");
+      expect(r.isError).toBe(false);
+      expect(read(root, "b.txt")).toBe("src");
     });
   });
 });

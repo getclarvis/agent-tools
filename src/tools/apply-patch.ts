@@ -79,7 +79,6 @@ export const applyPatchTool: ToolDef = {
       },
     },
     required: ["patch"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const patchText = args.patch as string;

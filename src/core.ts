@@ -19,7 +19,7 @@ interface AjvModule {
 
 const Ajv = (createRequire(import.meta.url)("ajv") as AjvModule).default;
 
-const ajv = new Ajv({ allErrors: true, useDefaults: true });
+const ajv = new Ajv({ allErrors: true, useDefaults: true, coerceTypes: true });
 const validators = new Map<string, ValidateFunction>();
 for (const tool of tools) {
   validators.set(tool.name, ajv.compile(tool.inputSchema));

@@ -92,13 +92,18 @@ describe("tree", () => {
     }
   });
 
-  it("rejects a depth below 1 with invalid_input", async () => {
+  it("treats depth 0 as unlimited (same as omitting depth)", async () => {
+    write(root, "a/b/c.txt", "x");
     const r = await callTool("tree", { depth: 0 }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain("a/");
+    expect(r.text).toContain("b/");
+    expect(r.text).toContain("c.txt");
   });
 
-  it("rejects out-of-schema input with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
     const r = await callTool("tree", { bogus: true }, config);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe(".\n(no entries)");
   });
 });

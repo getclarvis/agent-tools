@@ -159,11 +159,11 @@ describe("read_file", () => {
     expect(r.json.error).toBe("invalid_input");
   });
 
-  it("rejects out-of-schema input (unknown field) with invalid_input", async () => {
+  it("ignores out-of-schema extra fields", async () => {
     write(root, "a.txt", "x\n");
     const r = await callTool("read_file", { path: "a.txt", bogus: 1 }, config);
-    expect(r.isError).toBe(true);
-    expect(r.json.error).toBe("invalid_input");
+    expect(r.isError).toBe(false);
+    expect(r.text).toBe("     1\tx");
   });
 
   it("rejects missing required field with invalid_input", async () => {

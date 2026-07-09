@@ -30,7 +30,6 @@ export const readFiles: ToolDef = {
       },
     },
     required: ["paths"],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const paths = args.paths as string[];

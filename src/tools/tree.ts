@@ -101,7 +101,7 @@ export const tree: ToolDef = {
       },
       depth: {
         type: "integer",
-        minimum: 1,
+        minimum: 0,
         description: "Maximum levels to descend below the root. Omit for unlimited.",
       },
       respect_gitignore: {
@@ -112,12 +112,11 @@ export const tree: ToolDef = {
       },
     },
     required: [],
-    additionalProperties: false,
   },
   async handler(args, config) {
     const rel = (args.path as string | undefined) ?? ".";
     const target = resolvePath(rel, config.workspaceRoot, config.confineToWorkspace);
-    const maxDepth = args.depth as number | undefined;
+    const maxDepth = (args.depth as number | undefined) || undefined;
     const respectGitignore = args.respect_gitignore as boolean;
 
     await statDirectory(target, rel);
