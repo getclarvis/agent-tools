@@ -10,31 +10,31 @@
 
 | Tool                          | Mutating | Summary                                                            |
 | ----------------------------- | -------- | ------------------------------------------------------------------ |
-| [`read_file`](#read_file)     | no       | Read a text file (UTF-8/UTF-16), with line numbers, paging, tail.  |
-| [`read_files`](#read_files)   | no       | Read several text files in one call, each under a numbered header.  |
-| [`read_image`](#read_image)   | no       | Read an image (PNG/JPEG/GIF/WebP) as a base64 image part.          |
-| [`list_dir`](#list_dir)       | no       | List the entries of a directory.                                   |
+| [`read_file`](#read-file)     | no       | Read a text file (UTF-8/UTF-16), with line numbers, paging, tail.  |
+| [`read_files`](#read-files)   | no       | Read several text files in one call, each under a numbered header.  |
+| [`read_image`](#read-image)   | no       | Read an image (PNG/JPEG/GIF/WebP) as a base64 image part.          |
+| [`list_dir`](#list-dir)       | no       | List the entries of a directory.                                   |
 | [`glob`](#glob)               | no       | Find files by glob, most-recently-modified first.                  |
 | [`grep`](#grep)               | no       | Search file contents by regular expression (optionally multiline). |
 | [`diff`](#diff)               | no       | Unified diff between two text files, without git.                  |
-| [`file_stat`](#file_stat)     | no       | Structured metadata for a path (type, size, mtime, mode) as JSON.  |
+| [`file_stat`](#file-stat)     | no       | Structured metadata for a path (type, size, mtime, mode) as JSON.  |
 | [`tree`](#tree)               | no       | Print a directory as an indented, gitignore-aware tree.            |
 | [`outline`](#outline)         | no       | Symbol skeleton of a source file with line ranges (tree-sitter).   |
-| [`check_syntax`](#check_syntax) | no     | Parse a source file and report syntax errors (tree-sitter).        |
-| [`write_file`](#write_file)   | yes      | Create or overwrite a file (atomic).                               |
-| [`edit_file`](#edit_file)     | yes      | Replace one exact occurrence of a string in a file.                |
-| [`multi_edit`](#multi_edit)   | yes      | Apply several `edit_file`-style edits to one file atomically.      |
-| [`apply_patch`](#apply_patch) | yes      | Apply a unified diff (modify/create/delete/rename) atomically.     |
+| [`check_syntax`](#check-syntax) | no     | Parse a source file and report syntax errors (tree-sitter).        |
+| [`write_file`](#write-file)   | yes      | Create or overwrite a file (atomic).                               |
+| [`edit_file`](#edit-file)     | yes      | Replace one exact occurrence of a string in a file.                |
+| [`multi_edit`](#multi-edit)   | yes      | Apply several `edit_file`-style edits to one file atomically.      |
+| [`apply_patch`](#apply-patch) | yes      | Apply a unified diff (modify/create/delete/rename) atomically.     |
 | [`replace`](#replace)         | yes      | Project-wide regex find/replace with a dry-run preview (atomic).   |
 | [`move`](#move)               | yes      | Move/rename one file (atomic).                                     |
 | [`copy`](#copy)               | yes      | Copy one file, binary-safe (atomic).                              |
 | [`mkdir`](#mkdir)             | yes      | Create a directory and missing parents.                           |
 | [`remove`](#remove)           | yes      | Delete one file.                                                   |
 | [`bash`](#bash)               | yes      | Run a shell command (`sh -c`) and capture stdout/stderr/exit.      |
-| [`monitor_start`](#monitor_start) | yes  | Start a background command (dev server, watcher); return an id, optionally waiting until ready. |
-| [`monitor_poll`](#monitor_poll)   | yes  | Read a monitor's new output since a byte offset; report running state and exit code.            |
-| [`monitor_stop`](#monitor_stop)   | yes  | Stop a monitor (SIGTERM→SIGKILL) and remove its files.                                          |
-| [`monitor_list`](#monitor_list)   | yes  | List running and finished monitors.                                                             |
+| [`monitor_start`](#monitor-start) | yes  | Start a background command (dev server, watcher); return an id, optionally waiting until ready. |
+| [`monitor_poll`](#monitor-poll)   | yes  | Read a monitor's new output since a byte offset; report running state and exit code.            |
+| [`monitor_stop`](#monitor-stop)   | yes  | Stop a monitor (SIGTERM→SIGKILL) and remove its files.                                          |
+| [`monitor_list`](#monitor-list)   | yes  | List running and finished monitors.                                                             |
 
 Every failure is a JSON [error envelope](/reference/error-codes). Success is plain text for most
 tools; `bash` and the `monitor_*` tools return a JSON object, and `read_image` returns a base64 image
@@ -261,7 +261,7 @@ Create or overwrite a file with the given content (atomic: temp file + `rename`)
 Parent directories must already exist.
 
 **Syntax warning.** When the optional `@vscode/tree-sitter-wasm` peer dependency is installed and
-the file's extension has a grammar (see [`check_syntax`](#check_syntax)), the success message of
+the file's extension has a grammar (see [`check_syntax`](#check-syntax)), the success message of
 `write_file`, `edit_file`, `multi_edit`, and `apply_patch` gains a trailing
 `warning: <language> syntax error in <file> at line N, column C ...` line when the written content
 does not parse. Advisory only: the write always succeeds, the warning never becomes an error, and
@@ -294,7 +294,7 @@ Replace one occurrence of `old_string` with `new_string`.
 all-whitespace-collapsed, then trimmed-substring. It applies **only if it resolves to exactly one
 region** (otherwise `ambiguous_match`, never a guess), and the success message discloses that a
 tolerant match was used. Line endings and BOM are preserved. The result may carry a
-[syntax warning](#write_file).
+[syntax warning](#write-file).
 
 **Errors.** `no_match`, `ambiguous_match`, `invalid_input` (identical strings), `not_found`,
 `is_binary`, `too_large`, `path_escape`.
@@ -311,9 +311,9 @@ Apply several `edit_file`-style edits to ONE file in a single atomic call.
 **Behavior.** Edits run in order, each operating on the result of the previous, and each inherits
 `edit_file`'s exact-then-tolerant matching. The whole batch is applied atomically; any failing edit
 aborts the call — nothing is written — and the error names the failing edit index. The result may
-carry a [syntax warning](#write_file).
+carry a [syntax warning](#write-file).
 
-**Errors.** As [`edit_file`](#edit_file), prefixed with the failing edit index.
+**Errors.** As [`edit_file`](#edit-file), prefixed with the failing edit index.
 
 ## apply_patch
 
@@ -328,7 +328,7 @@ block whose old and new paths differ is a rename/move (with hunks it moves and e
 without them it is a pure rename that preserves the exact bytes). Each file block is validated and
 applied; all changes commit together or roll back together. Creating an existing path, renaming onto
 an existing destination, or naming the same path twice is rejected. Modified files preserve line
-endings and BOM; created files use LF. The result may carry [syntax warnings](#write_file) for up
+endings and BOM; created files use LF. The result may carry [syntax warnings](#write-file) for up
 to five written files.
 
 **Errors.** `patch_failed` (a hunk did not apply; names the file), `invalid_input`, `not_found`,
@@ -357,7 +357,7 @@ pattern with a workspace-confined, guardable, atomic operation.
 **Output.** With `dry_run: true` (the default): a totals line (`N replacement(s) across M file(s)`)
 followed by a unified-diff preview per changed file — **nothing is written**. With `dry_run: false`:
 the edits are applied atomically (all files succeed or none do, each file's line endings and BOM
-preserved) and a per-file summary is returned, possibly carrying [syntax warnings](#write_file) for up
+preserved) and a per-file summary is returned, possibly carrying [syntax warnings](#write-file) for up
 to five files. No matches yields `(no matches)`.
 
 **Errors.** `invalid_input` (bad regex, a pattern matching the empty string, or neither `path` nor
