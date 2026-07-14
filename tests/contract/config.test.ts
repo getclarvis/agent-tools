@@ -178,6 +178,17 @@ describe("config", () => {
       expect(cfg.maxOutputBytes).toBe(4096);
     });
 
+    it("defaults maxBashOutputBytes below maxOutputBytes and accepts a MAX_BASH_OUTPUT_BYTES override", () => {
+      const def = buildConfig(["--workspace", root], {}, noProbe);
+      expect(def.maxBashOutputBytes).toBe(16384);
+      expect(def.maxBashOutputBytes).toBeLessThan(def.maxOutputBytes);
+      const cfg = buildConfig(["--workspace", root], { MAX_BASH_OUTPUT_BYTES: "8192" }, noProbe);
+      expect(cfg.maxBashOutputBytes).toBe(8192);
+      expect(() =>
+        buildConfig(["--workspace", root], { MAX_BASH_OUTPUT_BYTES: "1" }, noProbe),
+      ).toThrow(StartupError);
+    });
+
     it("defaults maxImageBytes and accepts a MAX_IMAGE_BYTES override", () => {
       const def = buildConfig(["--workspace", root], {}, noProbe);
       expect(def.maxImageBytes).toBe(5_000_000);

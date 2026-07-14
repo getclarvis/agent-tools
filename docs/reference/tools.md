@@ -441,8 +441,11 @@ Run a shell command via `sh -c` and return stdout, stderr, and exit code.
 **Output.** On success, a JSON object `{ exit_code, stdout, stderr, signal, timed_out }`. The command
 runs to completion and **blocks** until it exits (stdin is closed) — a long-lived process must be
 backgrounded, e.g. `npm start > /tmp/out.log 2>&1 &`. **A non-zero exit is a normal result, not an
-error** (`isError` is `false`). stdout/stderr are budgeted against a shared `maxOutputBytes`; overflow
-is written to a `.clarvis/` spill file referenced in the result (see [Limits & spill](/guide/limits-and-spill)).
+error** (`isError` is `false`). stdout/stderr are budgeted against a shared `maxBashOutputBytes`
+(default 16 KB — lower than `maxOutputBytes`, since command logs are noisier than a file the model
+chose to read). On overflow the full output is written to a `.clarvis/` spill file and the inline
+result keeps the **tail** (the end, where errors and summaries live) behind a marker naming the spill
+path (see [Limits & spill](/guide/limits-and-spill)).
 
 **Errors.** `timeout` (process group killed; partial output returned), `output_limit` (a hard
 per-stream in-memory ceiling was hit and the command was killed), `not_found` / `not_a_file` (bad

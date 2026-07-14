@@ -189,7 +189,7 @@ describe("bash", () => {
 
   describe("output limits and spill", () => {
     it("spills overflowing stdout to a workspace file and points the footer at it", async () => {
-      const small = makeConfig(root, { maxOutputBytes: 64 });
+      const small = makeConfig(root, { maxBashOutputBytes: 64 });
       const r = await callTool(
         "bash",
         { command: "for i in $(seq 1 200); do echo line$i; done" },
@@ -199,6 +199,7 @@ describe("bash", () => {
       const stdout = r.json.stdout as string;
       expect(stdout).toContain("output truncated");
       expect(stdout).toContain("full output written to");
+      expect(stdout).toContain("line200");
 
       const m = stdout.match(/full output written to (\S+) \.\.\.\]/);
       expect(m).not.toBeNull();
@@ -210,7 +211,7 @@ describe("bash", () => {
     });
 
     it("budgets stdout and stderr against a single shared cap", async () => {
-      const small = makeConfig(root, { maxOutputBytes: 2000 });
+      const small = makeConfig(root, { maxBashOutputBytes: 2000 });
       const r = await callTool(
         "bash",
         { command: "for i in $(seq 1 500); do echo out$i; echo err$i 1>&2; done" },

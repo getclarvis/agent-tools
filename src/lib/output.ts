@@ -17,6 +17,21 @@ function truncate(
   return { shown: buf.subarray(0, end).toString("utf8"), end, total: buf.length };
 }
 
+function truncateTail(
+  text: string,
+  maxBytes: number,
+): { shown: string; shownBytes: number; total: number } | null {
+  const buf = Buffer.from(text, "utf8");
+  if (buf.length <= maxBytes) return null;
+  let start = buf.length - maxBytes;
+  while (start < buf.length && ((buf[start] ?? 0) & 0xc0) === 0x80) start++;
+  return {
+    shown: buf.subarray(start).toString("utf8"),
+    shownBytes: buf.length - start,
+    total: buf.length,
+  };
+}
+
 function truncationMarker(end: number, total: number): string {
   return `\n[... output truncated: ${end} of ${total} bytes shown ...]`;
 }
@@ -60,12 +75,17 @@ export function allocateBudget(aBytes: number, bBytes: number, total: number): [
   return [total - half, half];
 }
 
+function tailMarker(shownBytes: number, total: number, spillPath?: string): string {
+  const where = spillPath !== undefined ? `; full output written to ${spillPath}` : "";
+  return `[... earlier output truncated: last ${shownBytes} of ${total} bytes shown${where} ...]\n`;
+}
+
 export async function boundOrSpill(
   text: string,
   maxBytes: number,
   spill: { absPath: string; displayPath: string },
 ): Promise<string> {
-  const t = truncate(text, maxBytes);
+  const t = truncateTail(text, maxBytes);
   if (t === null) return text;
 
   try {
@@ -73,12 +93,8 @@ export async function boundOrSpill(
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(path.join(dir, ".gitignore"), "*\n", { flag: "wx" }).catch(() => {});
     await fs.writeFile(spill.absPath, text, "utf8");
-    return (
-      t.shown +
-      `\n[... output truncated: ${t.end} of ${t.total} bytes shown; ` +
-      `full output written to ${spill.displayPath} ...]`
-    );
+    return tailMarker(t.shownBytes, t.total, spill.displayPath) + t.shown;
   } catch {
-    return t.shown + truncationMarker(t.end, t.total);
+    return tailMarker(t.shownBytes, t.total) + t.shown;
   }
 }

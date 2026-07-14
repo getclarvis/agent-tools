@@ -9,7 +9,7 @@ the published page omits.
 
 | Path | Responsibility |
 |---|---|
-| [`src/lib/output.ts`](https://github.com/getclarvis/agent-tools/blob/main/src/lib/output.ts) | `bound`, `boundOrSpill`, `allocateBudget`, `sweepSpillDir`, and the internal `truncate` / `cutPoint` / `truncationMarker`. |
+| [`src/lib/output.ts`](https://github.com/getclarvis/agent-tools/blob/main/src/lib/output.ts) | `bound`, `boundOrSpill`, `allocateBudget`, `sweepSpillDir`, and the internal `truncate` / `truncateTail` / `cutPoint` / `truncationMarker` / `tailMarker`. |
 | [`src/lib/token.ts`](https://github.com/getclarvis/agent-tools/blob/main/src/lib/token.ts) | `uniqueToken()` — the `<pid>-<ms>-<counter>-<rand>` id used in spill/temp names. |
 | [`src/tools/bash.ts`](https://github.com/getclarvis/agent-tools/blob/main/src/tools/bash.ts) | The only spill producer: per-stream capture ceiling, `allocateBudget`, `boundOrSpill`. |
 
@@ -29,7 +29,9 @@ byte measurement).
 
 ## Two-stream budget: `allocateBudget(aBytes, bBytes, total)`
 
-`bash` has two streams (stdout, stderr) sharing one `maxOutputBytes`. `allocateBudget` splits fairly:
+`bash` has two streams (stdout, stderr) sharing one `maxBashOutputBytes` (default 16 KiB — lower than
+`maxOutputBytes`, since command logs are noisier than a file the model chose to read). `allocateBudget`
+splits fairly:
 
 - Both fit → give each its full size.
 - Otherwise each stream is guaranteed at least `floor(total/2)`; if one stream is small it gets its
@@ -42,13 +44,16 @@ The result is the `(outBudget, errBudget)` pair fed to two `boundOrSpill` calls.
 When a stream overflows its budget, instead of just truncating, `bash` writes the **full** stream to
 a file and points at it:
 
-1. `truncate` — under budget → return as-is.
+1. `truncateTail` — under budget → return as-is.
 2. `mkdir -p` the spill dir, best-effort drop a `.gitignore` containing `*` (`wx` flag; ignored if it
    exists) so the spill dir is never committed.
 3. Write the full text to `spill.absPath` (`bash-<token>.<stream>.log` under `<workspaceRoot>/.clarvis`).
-4. Return the truncated head plus a marker naming the file:
-   `[... output truncated: <end> of <total> bytes shown; full output written to <displayPath> ...]`.
-5. If the write fails, fall back to the plain truncation marker (never throw for a spill failure).
+4. Return a marker naming the file, then the truncated **tail** — the end of the stream, where errors
+   and summaries live, is kept over the head (`truncateTail` walks the start index forward off any
+   UTF-8 continuation byte so a multibyte char is never split):
+   `[... earlier output truncated: last <shownBytes> of <total> bytes shown; full output written to <displayPath> ...]`.
+5. If the write fails, fall back to the same tail marker without the spill path (never throw for a
+   spill failure).
 
 `bash` is `bounded: true`, so it opts out of `dispatch`'s outer `bound()` and owns this whole path.
 

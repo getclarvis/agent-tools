@@ -13,6 +13,7 @@ import path from "node:path";
 import { dispatch } from "../../src/core.js";
 import {
   DEFAULT_MAX_OUTPUT_BYTES,
+  DEFAULT_MAX_BASH_OUTPUT_BYTES,
   DEFAULT_MAX_FILE_BYTES,
   DEFAULT_MAX_IMAGE_BYTES,
   DEFAULT_BASH_TIMEOUT_MS,
@@ -35,6 +36,7 @@ export function makeConfig(root: string, overrides: Partial<ServerConfig> = {}):
   return {
     workspaceRoot: root,
     maxOutputBytes: DEFAULT_MAX_OUTPUT_BYTES,
+    maxBashOutputBytes: DEFAULT_MAX_BASH_OUTPUT_BYTES,
     maxFileBytes: DEFAULT_MAX_FILE_BYTES,
     maxImageBytes: DEFAULT_MAX_IMAGE_BYTES,
     bashTimeoutMs: DEFAULT_BASH_TIMEOUT_MS,

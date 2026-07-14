@@ -42,7 +42,7 @@ async function finalizeOutput(
   const [outBudget, errBudget] = allocateBudget(
     Buffer.byteLength(outText, "utf8"),
     Buffer.byteLength(errText, "utf8"),
-    config.maxOutputBytes,
+    config.maxBashOutputBytes,
   );
   const [stdout, stderr] = await Promise.all([
     boundOrSpill(outText, outBudget, spillTarget(config, "stdout")),
