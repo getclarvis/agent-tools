@@ -20,6 +20,7 @@ const PATH_METACHARS = /[$,*?[\](){}|<>!;=&`]/;
 const GLOB_METACHARS = /[*?[\]{}]/;
 const DOTDOT = /(^|\/)\.\.(\/|$)/;
 const TILDE_USER = /^~[^/]/;
+const REDIRECT_PREFIX = /^[0-9&]*(?:>>?|<)/;
 
 const SAFE_WRAPPERS = new Set(["timeout", "time", "nice", "nohup", "stdbuf"]);
 const ENV_ASSIGN = /^[A-Za-z_][A-Za-z0-9_]*=/;
@@ -273,22 +274,30 @@ export function analyzeBash(command: string): BashFacts {
   let tokenUndecidable = false;
   for (const seg of segments) {
     for (const token of tokenize(seg.command)) {
-      if (TILDE_USER.test(token.text)) {
+      const redirect = REDIRECT_PREFIX.exec(token.text);
+      let text = token.text;
+      if (redirect !== null) {
+        if (redirect[0].length === text.length) continue;
+        text = text.slice(redirect[0].length);
+      }
+      const glob = redirect !== null ? GLOB_METACHARS.test(text) : token.glob;
+
+      if (TILDE_USER.test(text)) {
         tokenUndecidable = true;
         continue;
       }
-      if (token.glob) {
-        if (DOTDOT.test(token.text)) tokenUndecidable = true;
-        const prefix = globLiteralPrefix(token.text);
+      if (glob) {
+        if (DOTDOT.test(text)) tokenUndecidable = true;
+        const prefix = globLiteralPrefix(text);
         if (!seen.has(prefix)) {
           seen.add(prefix);
           paths.push(prefix);
         }
         continue;
       }
-      if (looksLikePath(token.text) && !seen.has(token.text)) {
-        seen.add(token.text);
-        paths.push(token.text);
+      if (looksLikePath(text) && !seen.has(text)) {
+        seen.add(text);
+        paths.push(text);
       }
     }
   }

@@ -22,6 +22,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   marker naming the spill file, rather than the beginning. The full output is still written to the
   `.clarvis/` spill file unchanged, and the cut stays UTF-8-safe (never splits a multibyte character).
 
+### Fixed
+
+- **Guard: redirection targets are now extracted as paths.** A redirection target written without a
+  space after the operator (e.g. `>/etc/cron.d/x`) was tokenized as a single `>/etc/cron.d/x` token
+  and dropped by path analysis, so it never reached `BashFacts.paths`. With an `allowed_commands`
+  allowlist configured, an allowed command could then redirect-write outside the workspace and the
+  guard returned `allow`. `analyzeBash` now peels a leading redirection operator (`>`, `>>`, `2>`,
+  `&>`, `<`, glued or spaced) so the target is analyzed as the path it writes to.
+
 ## [0.5.0]
 
 ### Changed
