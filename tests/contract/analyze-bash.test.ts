@@ -117,6 +117,19 @@ describe("analyzeBash — path extraction", () => {
     expect(a.undecidable).toBe(false);
     expect(a.paths).toContain("~/.ssh/id_rsa");
   });
+
+  it("extracts redirect targets whether glued to the operator or spaced", () => {
+    expect(analyzeBash("echo pwned >/etc/cron.d/x").paths).toContain("/etc/cron.d/x");
+    expect(analyzeBash("echo pwned >>/etc/cron.d/x").paths).toContain("/etc/cron.d/x");
+    expect(analyzeBash("echo hi 2>/tmp/err").paths).toContain("/tmp/err");
+    expect(analyzeBash("echo hi &>/tmp/out").paths).toContain("/tmp/out");
+    expect(analyzeBash("cat </etc/passwd").paths).toContain("/etc/passwd");
+    const spaced = analyzeBash("echo pwned > /etc/cron.d/x");
+    expect(spaced.paths).toContain("/etc/cron.d/x");
+    expect(spaced.paths).not.toContain(">");
+    expect(analyzeBash("echo hi >out.txt").paths).toContain("out.txt");
+    expect(analyzeBash("echo hi >&2").paths).not.toContain("&2");
+  });
 });
 
 describe("analyzeBash — empty input", () => {
