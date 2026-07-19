@@ -9,6 +9,8 @@ export interface ServerConfig {
 
   maxOutputBytes: number;
 
+  maxBashOutputBytes: number;
+
   maxFileBytes: number;
 
   maxImageBytes: number;
@@ -35,6 +37,7 @@ export interface ServerConfig {
 }
 
 export const DEFAULT_MAX_OUTPUT_BYTES = 131072;
+export const DEFAULT_MAX_BASH_OUTPUT_BYTES = 16384;
 export const DEFAULT_MAX_FILE_BYTES = 20_000_000;
 export const DEFAULT_MAX_IMAGE_BYTES = 5_000_000;
 export const DEFAULT_BASH_TIMEOUT_MS = 120000;
@@ -153,6 +156,8 @@ export interface AgentToolsOptions {
 
   maxOutputBytes?: number;
 
+  maxBashOutputBytes?: number;
+
   maxFileBytes?: number;
 
   maxImageBytes?: number;
@@ -198,6 +203,11 @@ export function resolveConfig(options: AgentToolsOptions): ServerConfig {
       options.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES,
       MIN_OUTPUT_BYTES,
       "maxOutputBytes",
+    ),
+    maxBashOutputBytes: requireMin(
+      options.maxBashOutputBytes ?? DEFAULT_MAX_BASH_OUTPUT_BYTES,
+      MIN_OUTPUT_BYTES,
+      "maxBashOutputBytes",
     ),
     maxFileBytes: requireMin(
       options.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES,
@@ -262,6 +272,12 @@ export function buildConfig(
       env.MAX_OUTPUT_BYTES,
       DEFAULT_MAX_OUTPUT_BYTES,
       "MAX_OUTPUT_BYTES",
+      MIN_OUTPUT_BYTES,
+    ),
+    maxBashOutputBytes: parsePositiveInt(
+      env.MAX_BASH_OUTPUT_BYTES,
+      DEFAULT_MAX_BASH_OUTPUT_BYTES,
+      "MAX_BASH_OUTPUT_BYTES",
       MIN_OUTPUT_BYTES,
     ),
     maxFileBytes: parsePositiveInt(

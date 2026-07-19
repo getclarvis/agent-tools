@@ -125,15 +125,29 @@ describe("boundOrSpill()", () => {
     expect(exists(root, ".clarvis/bash-stdout.txt")).toBe(false);
   });
 
-  it("spills the full output and writes a .gitignore when truncating", async () => {
-    const text = "A".repeat(500);
+  it("spills the full output, keeps the TAIL inline, and writes a .gitignore", async () => {
+    const text = "HEAD" + "A".repeat(500) + "TAIL";
     const out = await boundOrSpill(text, 50, {
       absPath: path.join(root, ".clarvis", "bash-stdout.txt"),
       displayPath: ".clarvis/bash-stdout.txt",
     });
     expect(out).toContain("full output written to .clarvis/bash-stdout.txt");
+    expect(out.endsWith("TAIL")).toBe(true);
+    expect(out).not.toContain("HEAD");
+    expect(out.startsWith("[... earlier output truncated")).toBe(true);
     expect(read(root, ".clarvis/bash-stdout.txt")).toBe(text);
     expect(read(root, ".clarvis/.gitignore")).toBe("*\n");
+  });
+
+  it("cuts the tail on a valid UTF-8 boundary (no broken multibyte char)", async () => {
+    const text = "x".repeat(20) + "é".repeat(20);
+    const out = await boundOrSpill(text, 15, {
+      absPath: path.join(root, ".clarvis", "bash-stdout.txt"),
+      displayPath: ".clarvis/bash-stdout.txt",
+    });
+    expect(out).not.toContain("�");
+    expect(out.endsWith("é")).toBe(true);
+    expect(read(root, ".clarvis/bash-stdout.txt")).toBe(text);
   });
 
   it("does not overwrite an existing .gitignore", async () => {
@@ -160,7 +174,9 @@ describe("boundOrSpill()", () => {
       absPath: path.join(blocker, "sub", "bash-stdout.txt"),
       displayPath: "blk/sub/bash-stdout.txt",
     });
-    expect(out).toMatch(/\[\.\.\. output truncated: \d+ of \d+ bytes shown \.\.\.\]$/);
+    expect(out).toMatch(
+      /^\[\.\.\. earlier output truncated: last \d+ of \d+ bytes shown \.\.\.\]\n/,
+    );
     expect(out).not.toContain("full output written");
   });
 });
@@ -171,7 +187,7 @@ describe("tool-level output bounding", () => {
 
   beforeEach(() => {
     root = makeWorkspace();
-    config = makeConfig(root, { maxOutputBytes: 100 });
+    config = makeConfig(root, { maxOutputBytes: 100, maxBashOutputBytes: 100 });
   });
   afterEach(() => cleanup(root));
 

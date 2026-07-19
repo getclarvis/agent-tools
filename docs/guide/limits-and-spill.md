@@ -23,9 +23,12 @@ The minimum is 1024 bytes; values below it are rejected when the config is built
 
 - **Hard per-stream in-memory ceiling.** A command that keeps writing without end is killed (its
   whole process group) and the call fails with `output_limit`, rather than exhausting memory.
-- **Spill on overflow.** When a *completed* command's combined stdout+stderr exceeds the display cap,
-  the full captured output is written to a spill file under `.clarvis/` in the workspace, and the
-  bounded result points at it. You get the truncated view inline and the complete output on disk.
+- **Spill on overflow.** When a *completed* command's combined stdout+stderr exceeds the `bash`
+  display cap (`maxBashOutputBytes`, default **16 KB** — lower than `maxOutputBytes`, since command
+  logs are noisier than a file the model chose to read), the full captured output is written to a
+  spill file under `.clarvis/` in the workspace, and the bounded result keeps the **tail** inline
+  (the end, where errors and summaries are) preceded by a marker naming the spill path. You get the
+  useful tail inline and the complete output on disk.
 
 The spill directory is created with its own `.gitignore`, so spill files never end up tracked. To
 clean up old spill files, call `sweepSpillDir`:

@@ -77,7 +77,8 @@ code `not_found`.
 | `workspaceRoot`      | — (required) | Base directory; relative tool paths resolve against it.                 |
 | `readOnly`           | `false`      | Expose only the non-mutating tools (`read_file`/`read_files`/`read_image`/`list_dir`/`glob`/`grep`/`diff`/`file_stat`/`tree`/`outline`/`check_syntax`). |
 | `confineToWorkspace` | `true`       | Reject paths that escape the workspace root (`path_escape`).             |
-| `maxOutputBytes`     | `131072`     | Per-result output cap (UTF-8 bytes); larger output is bounded.           |
+| `maxOutputBytes`     | `131072`     | Per-result output cap (UTF-8 bytes) for reads/grep/diff/…; larger output is bounded. |
+| `maxBashOutputBytes` | `16384`      | Inline cap for `bash` stdout+stderr (lower than `maxOutputBytes`); overflow spills to a `.clarvis/` file and the tail is kept inline. |
 | `maxFileBytes`       | `20000000`   | Max size of an input file the text tools read; larger is rejected.      |
 | `maxImageBytes`      | `5000000`    | Max size of an image `read_image` will load; larger is rejected.        |
 | `bashTimeoutMs`      | `120000`     | Default `bash` timeout in milliseconds.                                  |
@@ -150,11 +151,13 @@ error codes).
 ### Output bounding
 
 Every tool result is capped to `maxOutputBytes` (truncated on a UTF-8 character
-boundary, with a marker). `bash` additionally enforces a hard per-stream
+boundary, with a marker). `bash` uses its own, smaller `maxBashOutputBytes` cap
+for the inline stdout/stderr, and additionally enforces a hard per-stream
 in-memory ceiling while a command runs: a command that produces unbounded output
 is killed and the call returns an `output_limit` error rather than exhausting
-memory. When `bash` output overflows the display cap, the full captured output is
-written to a `.clarvis/` spill file and the result points at it.
+memory. When `bash` output overflows its cap, the full captured output is written
+to a `.clarvis/` spill file and the result keeps the tail inline, behind a marker
+pointing at the file.
 
 ### Input bounding
 

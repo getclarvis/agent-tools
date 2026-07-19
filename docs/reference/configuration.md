@@ -13,7 +13,8 @@
 | `workspaceRoot`      | `string`          | — (required)        | Base directory; relative tool paths resolve against it. Must be an existing directory.           |
 | `readOnly`           | `boolean`         | `false`             | Expose only the non-mutating tools (`read_file` / `read_files` / `read_image` / `list_dir` / `glob` / `grep` / `diff` / `file_stat` / `tree` / `outline` / `check_syntax`). |
 | `confineToWorkspace` | `boolean`         | `true`              | Reject paths that escape the workspace root (`path_escape`). `false` restores unrestricted paths.|
-| `maxOutputBytes`     | `number`          | `131072` (128 KB)   | Per-result output cap in UTF-8 bytes. Floor `1024`.                                              |
+| `maxOutputBytes`     | `number`          | `131072` (128 KB)   | Per-result output cap in UTF-8 bytes for reads/grep/diff/… Floor `1024`.                         |
+| `maxBashOutputBytes` | `number`          | `16384` (16 KB)     | Inline cap for `bash` stdout+stderr; overflow spills to a `.clarvis/` file and the tail is kept inline. Floor `1024`. |
 | `maxFileBytes`       | `number`          | `20000000` (20 MB)  | Max size of an input file the text tools read; larger is rejected. Floor `1024`.                |
 | `maxImageBytes`      | `number`          | `5000000` (5 MB)    | Max size of an image `read_image` will load; larger is rejected. Floor `1024`.                  |
 | `bashTimeoutMs`      | `number`          | `120000` (2 min)    | Default `bash` timeout in milliseconds. Floor `1`.                                              |
@@ -57,6 +58,7 @@ The resolved config every tool receives. All fields are concrete (no optionals):
 interface ServerConfig {
   workspaceRoot: string;
   maxOutputBytes: number;
+  maxBashOutputBytes: number;
   maxFileBytes: number;
   maxImageBytes: number;
   bashTimeoutMs: number;
@@ -91,6 +93,7 @@ It parses the sources below, then delegates to `resolveConfig`.
 | `readOnly`           | `--read-only`                 | `READ_ONLY`               | Env accepts `1`/`true`/`yes`/`on` (or `0`/`false`/`no`/`off`).|
 | `confineToWorkspace` | `--allow-outside-workspace`   | `ALLOW_OUTSIDE_WORKSPACE` | Flag/env **disable** confinement (`true` ⇒ not confined).    |
 | `maxOutputBytes`     | —                             | `MAX_OUTPUT_BYTES`        | Positive integer ≥ 1024.                                     |
+| `maxBashOutputBytes` | —                             | `MAX_BASH_OUTPUT_BYTES`   | Positive integer ≥ 1024. Inline `bash` output cap (default 16 KB). |
 | `maxFileBytes`       | —                             | `MAX_FILE_BYTES`          | Positive integer ≥ 1024.                                     |
 | `maxImageBytes`      | —                             | `MAX_IMAGE_BYTES`         | Positive integer ≥ 1024.                                     |
 | `bashTimeoutMs`      | —                             | `BASH_TIMEOUT_MS`         | Positive integer.                                            |

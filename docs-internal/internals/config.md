@@ -20,7 +20,7 @@ the validation primitives, the argv/env builder, and the floors the published pa
 | `buildConfig(argv, env, probe?, probeTS?)` | function | argv/env front-end (CLI / long-running service). Parses flags + vars, then delegates to `resolveConfig`. |
 | `ServerConfig` / `AgentToolsOptions` | types | The resolved config, and the options accepted by `resolveConfig`/`createAgentTools`. |
 | `StartupError` | class | Thrown for any invalid config; distinct from a runtime `ToolError`. |
-| `DEFAULT_MAX_OUTPUT_BYTES` `DEFAULT_MAX_FILE_BYTES` `DEFAULT_BASH_TIMEOUT_MS` `DEFAULT_BASH_TIMEOUT_MAX_MS` | const | The shipped defaults, exported for callers and tests. |
+| `DEFAULT_MAX_OUTPUT_BYTES` `DEFAULT_MAX_BASH_OUTPUT_BYTES` `DEFAULT_MAX_FILE_BYTES` `DEFAULT_BASH_TIMEOUT_MS` `DEFAULT_BASH_TIMEOUT_MAX_MS` | const | The shipped defaults, exported for callers and tests. |
 
 Internal (not exported): `MIN_OUTPUT_BYTES` / `MIN_FILE_BYTES` (1024), `parseWorkspaceArg`,
 `resolveReadOnly`, `resolveConfine`, `parsePositiveInt`, `probeRipgrep`, `validateWorkspace`,
@@ -34,6 +34,7 @@ Internal (not exported): `MIN_OUTPUT_BYTES` / `MIN_FILE_BYTES` (1024), `parseWor
 |---|---|---|
 | `workspaceRoot` | — (required) | `path.resolve`d; must exist and be a directory (`validateWorkspace`). |
 | `maxOutputBytes` | `131072` | integer ≥ `1024`. |
+| `maxBashOutputBytes` | `16384` | integer ≥ `1024`. The inline `bash` cap; deliberately below `maxOutputBytes`. |
 | `maxFileBytes` | `20_000_000` | integer ≥ `1024`. |
 | `bashTimeoutMs` | `120000` | integer ≥ `1`. |
 | `bashTimeoutMaxMs` | `600000` | integer ≥ `1`, and **≥ `bashTimeoutMs`** (cross-field check). |
@@ -65,7 +66,7 @@ none). It maps:
 | `--workspace <path>` / `--workspace=<path>` / `WORKSPACE_ROOT` | `workspaceRoot` (flag wins) |
 | `--read-only` / `READ_ONLY` (`1/true/yes/on` ↔ `0/false/no/off`) | `readOnly` |
 | `--allow-outside-workspace` / `ALLOW_OUTSIDE_WORKSPACE` (same truthy set) | `confineToWorkspace` (inverted) |
-| `MAX_OUTPUT_BYTES` / `MAX_FILE_BYTES` / `BASH_TIMEOUT_MS` / `BASH_TIMEOUT_MAX_MS` | the matching numeric field |
+| `MAX_OUTPUT_BYTES` / `MAX_BASH_OUTPUT_BYTES` / `MAX_FILE_BYTES` / `BASH_TIMEOUT_MS` / `BASH_TIMEOUT_MAX_MS` | the matching numeric field |
 
 An unrecognized truthy string for `READ_ONLY` / `ALLOW_OUTSIDE_WORKSPACE` throws `StartupError`
 (strict — not silently falsey). The `bashTimeoutMaxMs >= bashTimeoutMs` check runs both in

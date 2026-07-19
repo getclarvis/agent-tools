@@ -472,10 +472,13 @@ with its output redirected, e.g. `npm start > /tmp/out.log 2>&1 &`. On success
 the result is a JSON object `{ exit_code, stdout, stderr, signal, timed_out }`.
 A non-zero exit is a normal result, not an error.
 
-stdout and stderr are budgeted against a shared `MAX_OUTPUT_BYTES`; overflow is
-written to a `.clarvis/` spill file referenced in the result. There is a hard
-per-stream in-memory ceiling: a command producing unbounded output is killed
-(process group) and the call fails with `output_limit`.
+stdout and stderr are budgeted against a shared `MAX_BASH_OUTPUT_BYTES` (default
+16 KiB — deliberately lower than `MAX_OUTPUT_BYTES`, since command logs are far
+noisier than a file the model deliberately read). On overflow the **full** output
+is written to a `.clarvis/` spill file and the inline result keeps the **tail**
+(the end, where errors and summaries live) preceded by a marker naming the spill
+path. There is a hard per-stream in-memory ceiling: a command producing unbounded
+output is killed (process group) and the call fails with `output_limit`.
 
 On timeout the process group is killed and `timeout` is returned (with the
 partial stdout/stderr).

@@ -7,6 +7,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`maxBashOutputBytes` — a separate, smaller inline cap for `bash` output.** `bash` stdout/stderr
+  are now budgeted against their own cap (default **16 KB**, floor `1024`, overridable via the
+  `MAX_BASH_OUTPUT_BYTES` env var) instead of sharing the 128 KB `maxOutputBytes`. Command logs are
+  far noisier than a file the model deliberately read, so the inline view stays tight while the full
+  output is still spilled to `.clarvis/`. The default is exported as `DEFAULT_MAX_BASH_OUTPUT_BYTES`.
+
+### Changed
+
+- **`bash` spill keeps the tail, not the head.** When a completed command's output overflows the cap,
+  the inline result now keeps the **end** of the stream — where errors and summaries live — behind a
+  marker naming the spill file, rather than the beginning. The full output is still written to the
+  `.clarvis/` spill file unchanged, and the cut stays UTF-8-safe (never splits a multibyte character).
+
 ## [0.5.0]
 
 ### Changed
